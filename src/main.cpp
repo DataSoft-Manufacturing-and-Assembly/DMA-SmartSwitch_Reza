@@ -5,11 +5,13 @@
 // #include <FastLED.h>
 
 #include <RCSwitch.h>
-
 RCSwitch mySwitch = RCSwitch();
 
-#include <Preferences.h>
+// #include <map>
+// std::map<unsigned long, unsigned long> lastRFReceivedTimeMap;
+// unsigned long lastRFGlobalReceivedTime = 0;  // Global debounce
 
+#include <Preferences.h>
 Preferences preferences; // Create a Preferences object
 
 #define RF_PIN 25  
@@ -27,11 +29,11 @@ Preferences preferences; // Create a Preferences object
 #define WORK_PACKAGE "1225"
 #define GW_TYPE "00"
 #define FIRMWARE_UPDATE_DATE "250212" 
-#define DEVICE_SERIAL "0001"
+#define DEVICE_SERIAL "0006"
 #define DEVICE_ID WORK_PACKAGE GW_TYPE FIRMWARE_UPDATE_DATE DEVICE_SERIAL
 
 #define HB_INTERVAL 30*1000
-#define DATA_INTERVAL 15*1000
+// #define DATA_INTERVAL 15*1000
 
 // WiFi and MQTT reconnection time config
 #define WIFI_ATTEMPT_COUNT 30
@@ -369,6 +371,14 @@ void mainTask(void *param) {
     // **Handle RF Signal Reception with Debounce**
     if (mySwitch.available()) {
       unsigned long receivedCode = mySwitch.getReceivedValue();
+      int bitLength = mySwitch.getReceivedBitlength(); // Get bit length of the received signal
+
+      // **Ignore signals that do not match the expected bit length (e.g., < 24 bits)**
+      if (bitLength < 24) {  
+        DEBUG_PRINTLN(String("Ignored RF Signal: ") + String(receivedCode) + " (Bits: " + String(bitLength) + ")");
+        mySwitch.resetAvailable();
+        return;
+      }
 
       // **Debounce Check: Ignore Repeats Within 500ms**
       if (receivedCode != lastReceivedCode || now - lastReceivedTime > 2000) {  
@@ -388,7 +398,7 @@ void mainTask(void *param) {
     
       mySwitch.resetAvailable();
     }
-
+    
     vTaskDelay(1); // Keep FreeRTOS responsive
   }
 }
