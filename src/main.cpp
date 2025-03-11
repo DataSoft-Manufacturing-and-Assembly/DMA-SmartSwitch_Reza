@@ -27,12 +27,12 @@ Preferences preferences; // Create a Preferences object
 #define DEBUG_PRINTLN(x) if (DEBUG_MODE) { Serial.println(x); }
 
 #define WORK_PACKAGE "1225"
-#define GW_TYPE "00"
+#define GW_TYPE "10"
 #define FIRMWARE_UPDATE_DATE "250212" 
 #define DEVICE_SERIAL "0006"
 #define DEVICE_ID WORK_PACKAGE GW_TYPE FIRMWARE_UPDATE_DATE DEVICE_SERIAL
 
-#define HB_INTERVAL 30*1000
+#define HB_INTERVAL 5*60*1000
 // #define DATA_INTERVAL 15*1000
 
 // WiFi and MQTT reconnection time config
@@ -339,6 +339,7 @@ void mainTask(void *param) {
 
 */
 
+
 void mainTask(void *param) {
   unsigned long lastReceivedTime = 0;  
   unsigned long lastReceivedCode = 0;
@@ -377,7 +378,7 @@ void mainTask(void *param) {
       if (bitLength < 24) {  
         DEBUG_PRINTLN(String("Ignored RF Signal: ") + String(receivedCode) + " (Bits: " + String(bitLength) + ")");
         mySwitch.resetAvailable();
-        return;
+        continue;  // Continue instead of return to keep the task running
       }
 
       // **Debounce Check: Ignore Repeats Within 500ms**
@@ -399,9 +400,10 @@ void mainTask(void *param) {
       mySwitch.resetAvailable();
     }
     
-    vTaskDelay(1); // Keep FreeRTOS responsive
+    vTaskDelay(pdMS_TO_TICKS(10)); // Keep FreeRTOS responsive
   }
 }
+
 
 void setup() {
   Serial.begin(115200);
