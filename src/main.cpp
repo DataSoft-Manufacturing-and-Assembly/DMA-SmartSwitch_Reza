@@ -3,16 +3,18 @@
 #include <WiFiManager.h>  // WiFiManager library
 #include <PubSubClient.h>
 // #include <FastLED.h>
-
+#include <HTTPClient.h>
 #include <RCSwitch.h>
 RCSwitch mySwitch = RCSwitch();
 
-// #include <map>
-// std::map<unsigned long, unsigned long> lastRFReceivedTimeMap;
-// unsigned long lastRFGlobalReceivedTime = 0;  // Global debounce
-
 #include <Preferences.h>
 Preferences preferences; // Create a Preferences object
+
+void otaTask(void *param);
+
+#include <map>
+std::map<unsigned long, unsigned long> lastRFReceivedTimeMap;
+unsigned long lastRFGlobalReceivedTime = 0;  // Global debounce
 
 #define RF_PIN 25  
 #define SW_PIN1 18  
@@ -26,17 +28,23 @@ Preferences preferences; // Create a Preferences object
 #define DEBUG_PRINT(x)  if (DEBUG_MODE) { Serial.print(x); }
 #define DEBUG_PRINTLN(x) if (DEBUG_MODE) { Serial.println(x); }
 
+#define CHANGE_DEICE_ID 0
+
+#if CHANGE_DEICE_ID
 #define WORK_PACKAGE "1225"
 #define GW_TYPE "10"
 #define FIRMWARE_UPDATE_DATE "250212" 
 #define DEVICE_SERIAL "0006"
-#define DEVICE_ID WORK_PACKAGE GW_TYPE FIRMWARE_UPDATE_DATE DEVICE_SERIAL
+//#define DEVICE_ID WORK_PACKAGE GW_TYPE FIRMWARE_UPDATE_DATE DEVICE_SERIAL
+#endif
+
+const char* DEVICE_ID;
 
 #define HB_INTERVAL 5*60*1000
 // #define DATA_INTERVAL 15*1000
 
 // WiFi and MQTT reconnection time config
-#define WIFI_ATTEMPT_COUNT 30
+#define WIFI_ATTEMPT_COUNT 60
 #define WIFI_ATTEMPT_DELAY 1000
 #define WIFI_WAIT_COUNT 60
 #define WIFI_WAIT_DELAY 1000
@@ -55,6 +63,7 @@ const char* mqtt_password = "Secret!@#$1234";
 const char* mqtt_hb_topic = "DMA/SmartSwitch/HB";
 const char* mqtt_pub_topic = "DMA/SmartSwitch/PUB";
 const char* mqtt_sub_topic = "DMA/SmartSwitch/SUB";
+const char* ota_url = "https://raw.githubusercontent.com/rezaul-rimon/DMA-SmartSwitch_Reza/with-ota/ota/firmware.bin";
 
 #if Fast_LED
 #define DATA_PIN 4
@@ -69,6 +78,7 @@ PubSubClient client(espClient);
 TaskHandle_t networkTaskHandle;
 TaskHandle_t mainTaskHandle;
 TaskHandle_t wifiResetTaskHandle;
+TaskHandle_t otaTaskHandle = NULL;
 
 #define WIFI_RESET_BUTTON_PIN 0
 bool wifiResetFlag = false;
@@ -100,8 +110,9 @@ void reconnectWiFi() {
     }
   }
 }
+//=========================================
 
-
+// Function to reconnect MQTT
 void reconnectMQTT() {
   if (!client.connected()) {
     #if Fast_LED
@@ -136,7 +147,9 @@ void reconnectMQTT() {
     }
   }
 }
+//===============================================
 
+//MQTT Callback Function
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   String message;
   for (unsigned int i = 0; i < length; i++) {
@@ -223,12 +236,32 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       client.publish(mqtt_pub_topic, data);
       DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
   }
-
-
   preferences.end();  // Close Preferences storage
+  
+  
+  if (message == "ping") {
+    DEBUG_PRINTLN("Request for ping");
+    char pingData[100]; // Increased size for additional info
+    snprintf(pingData, sizeof(pingData), "%s,%s,%s,%d,%d",
+             DEVICE_ID, WiFi.SSID().c_str(),
+             WiFi.localIP().toString().c_str(), WiFi.RSSI(), HB_INTERVAL);
+    client.publish(mqtt_pub_topic, pingData);
+
+    DEBUG_PRINT("Sent ping response to MQTT: ");
+    DEBUG_PRINTLN(pingData);
+  }
+
+  if (message == "update_firmware") {
+    if (otaTaskHandle == NULL) {
+      xTaskCreatePinnedToCore(otaTask, "OTA Task", 8*1024, NULL, 1, &otaTaskHandle, 1);
+    } else {
+      Serial.println("OTA Task already running.");
+    }
+  }
 }
+//===================================
 
-
+// Start Network Task
 void networkTask(void *param) {
   WiFi.mode(WIFI_STA);
   WiFi.begin();
@@ -245,7 +278,9 @@ void networkTask(void *param) {
     vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
+//================================
 
+//Start WiFi reset task
 void wifiResetTask(void *param) {
   for (;;) {
     if (digitalRead(WIFI_RESET_BUTTON_PIN) == LOW) {
@@ -278,7 +313,48 @@ void wifiResetTask(void *param) {
     vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
+//=================================
 
+//Start OTA Task
+void otaTask(void *parameter) {
+  Serial.println("Starting OTA update...");
+
+  HTTPClient http;
+  http.begin(ota_url);
+  int httpCode = http.GET();
+
+  if (httpCode == HTTP_CODE_OK) {
+    int contentLength = http.getSize();
+    Serial.printf("Content-Length: %d bytes\n", contentLength);
+    
+    if (Update.begin(contentLength)) {
+      Update.writeStream(http.getStream());
+      if (Update.end() && Update.isFinished()) {
+        Serial.println("OTA update completed. Restarting...");
+        client.publish(mqtt_pub_topic, "OTA update successful");
+        vTaskDelay(1000 / portTICK_PERIOD_MS); // Allow MQTT message to send
+        ESP.restart();
+      } else {
+        Serial.println("OTA update failed!");
+        client.publish(mqtt_pub_topic, "OTA update failed, restarting with last firmware");
+      }
+    } else {
+      Serial.println("OTA begin failed!");
+      client.publish(mqtt_pub_topic, "OTA begin failed, restarting with last firmware");
+    }
+  } else {
+    Serial.printf("HTTP request failed, error: %s\n", http.errorToString(httpCode).c_str());
+    client.publish(mqtt_pub_topic, "OTA HTTP request failed, restarting with last firmware");
+  }
+
+  http.end();
+
+  vTaskDelay(1000 / portTICK_PERIOD_MS); // Allow MQTT message to send
+  ESP.restart();
+
+  otaTaskHandle = NULL;  // Clear task handle
+  vTaskDelete(NULL);  // Delete OTA task
+}
 /*
 void mainTask(void *param) {
   for (;;) {
@@ -339,7 +415,7 @@ void mainTask(void *param) {
 
 */
 
-
+// Start Main Task
 void mainTask(void *param) {
   unsigned long lastReceivedTime = 0;  
   unsigned long lastReceivedCode = 0;
@@ -370,6 +446,36 @@ void mainTask(void *param) {
     }
 
     // **Handle RF Signal Reception with Debounce**
+    // if (mySwitch.available()) {
+    //   unsigned long receivedCode = mySwitch.getReceivedValue();
+    //   int bitLength = mySwitch.getReceivedBitlength(); // Get bit length of the received signal
+
+    //   // **Ignore signals that do not match the expected bit length (e.g., < 24 bits)**
+    //   if (bitLength < 24) {  
+    //     DEBUG_PRINTLN(String("Ignored RF Signal: ") + String(receivedCode) + " (Bits: " + String(bitLength) + ")");
+    //     mySwitch.resetAvailable();
+    //     continue;
+    //   }
+
+    //   // **Debounce Check: Ignore Repeats Within 500ms**
+    //   if (receivedCode != lastReceivedCode || now - lastReceivedTime > 500) {  
+    //     lastReceivedTime = now;
+    //     lastReceivedCode = receivedCode;
+    
+    //     // Correct Debug Print with Macro
+    //     DEBUG_PRINTLN(String("RF Received: ") + String(receivedCode));
+    
+    //     char data[50];
+    //     snprintf(data, sizeof(data), "%s,%lu", DEVICE_ID, receivedCode); 
+    //     client.publish(mqtt_pub_topic, data);
+    
+    //     // Correct Debug Print for MQTT Data
+    //     DEBUG_PRINTLN(String("Data Sent to MQTT: ") + String(data));
+    //   }
+    
+    //   mySwitch.resetAvailable();
+    // }
+    
     if (mySwitch.available()) {
       unsigned long receivedCode = mySwitch.getReceivedValue();
       int bitLength = mySwitch.getReceivedBitlength(); // Get bit length of the received signal
@@ -378,28 +484,35 @@ void mainTask(void *param) {
       if (bitLength < 24) {  
         DEBUG_PRINTLN(String("Ignored RF Signal: ") + String(receivedCode) + " (Bits: " + String(bitLength) + ")");
         mySwitch.resetAvailable();
-        continue;  // Continue instead of return to keep the task running
+        continue;;
       }
 
-      // **Debounce Check: Ignore Repeats Within 500ms**
-      if (receivedCode != lastReceivedCode || now - lastReceivedTime > 2000) {  
-        lastReceivedTime = now;
-        lastReceivedCode = receivedCode;
-    
-        // Correct Debug Print with Macro
-        DEBUG_PRINTLN(String("RF Received: ") + String(receivedCode));
-    
+      // **Short-Term Global Debounce (Ignore if received within 100ms)**
+      if (now - lastRFGlobalReceivedTime < 100) {
+        mySwitch.resetAvailable();
+        continue;
+      }
+
+      // **Per-Sensor Debounce (Ignore same sensor within 2 sec)**
+      if (lastRFReceivedTimeMap.find(receivedCode) == lastRFReceivedTimeMap.end() || 
+          (now - lastRFReceivedTimeMap[receivedCode] > 2000)) {  
+
+        lastRFReceivedTimeMap[receivedCode] = now;  // Update per-sensor time
+        lastRFGlobalReceivedTime = now;  // Update global debounce
+
+        // **Debug Output**
+        DEBUG_PRINTLN(String("Valid RF Received: ") + String(receivedCode) + " (Bits: " + String(bitLength) + ")");
+        
+        // **Send Data to MQTT**
         char data[50];
-        snprintf(data, sizeof(data), "%s,%lu", DEVICE_ID, receivedCode); 
+        snprintf(data, sizeof(data), "%s,%lu", DEVICE_ID, receivedCode);
         client.publish(mqtt_pub_topic, data);
-    
-        // Correct Debug Print for MQTT Data
         DEBUG_PRINTLN(String("Data Sent to MQTT: ") + String(data));
       }
-    
+
       mySwitch.resetAvailable();
     }
-    
+
     vTaskDelay(pdMS_TO_TICKS(10)); // Keep FreeRTOS responsive
   }
 }
@@ -407,6 +520,27 @@ void mainTask(void *param) {
 
 void setup() {
   Serial.begin(115200);
+
+  preferences.begin("device_data", false);  // Open Preferences (NVS)
+  static String device_id; // Static variable to persist scope
+  
+  #if CHANGE_DEVICE_ID
+    // Construct new device ID
+    device_id = String(WORK_PACKAGE) + GW_TYPE + FIRMWARE_UPDATE_DATE + DEVICE_SERIAL;
+    
+    // Save device ID to Preferences
+    preferences.putString("device_id", device_id);
+    Serial.println("Device ID updated in Preferences: " + device_id);
+  #else
+    // Restore device ID from Preferences
+    device_id = preferences.getString("device_id", "UNKNOWN");
+    Serial.println("Restored Device ID from Preferences: " + device_id);
+  #endif
+
+  DEVICE_ID = device_id.c_str(); // Assign to global pointer
+
+  preferences.end();
+  
   DEBUG_PRINT("Device ID: ");
   DEBUG_PRINTLN(DEVICE_ID);
   
@@ -430,7 +564,7 @@ void setup() {
   digitalWrite(SW_PIN3, LOW);
   digitalWrite(SW_PIN4, LOW);
 
-  preferences.begin("switches", true);  // Open Preferences in read-only mode
+  preferences.begin("switches", false);  // Open Preferences
 
   digitalWrite(SW_PIN1, preferences.getBool("sw1", false)); // Default: OFF
   digitalWrite(SW_PIN2, preferences.getBool("sw2", false));
