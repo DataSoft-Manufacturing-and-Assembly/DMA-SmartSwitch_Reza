@@ -63,7 +63,7 @@ const char* mqtt_password = "Secret!@#$1234";
 const char* mqtt_hb_topic = "DMA/SmartSwitch/HB";
 const char* mqtt_pub_topic = "DMA/SmartSwitch/PUB";
 const char* mqtt_sub_topic = "DMA/SmartSwitch/SUB";
-const char* ota_url = "https://raw.githubusercontent.com/rezaul-rimon/DMA-SmartSwitch_Reza/with-ota/ota/firmware.bin";
+const char* ota_url = "https://raw.githubusercontent.com/DataSoft-Manufacturing-and-Assembly/DMA-SmartSwitch_Reza/with-ota/ota/firmware.bin";
 
 #if Fast_LED
 #define DATA_PIN 4
@@ -316,6 +316,7 @@ void wifiResetTask(void *param) {
 //=================================
 
 //Start OTA Task
+/*
 void otaTask(void *parameter) {
   Serial.println("Starting OTA update...");
 
@@ -331,30 +332,90 @@ void otaTask(void *parameter) {
       Update.writeStream(http.getStream());
       if (Update.end() && Update.isFinished()) {
         Serial.println("OTA update completed. Restarting...");
-        client.publish(mqtt_pub_topic, "OTA update successful");
-        vTaskDelay(1000 / portTICK_PERIOD_MS); // Allow MQTT message to send
+        char message[64];  
+        snprintf(message, sizeof(message), "%s,OTA update successful", DEVICE_ID);  
+        client.publish(mqtt_pub_topic, message);
+        vTaskDelay(1000 / portTICK_PERIOD_MS); 
         ESP.restart();
       } else {
         Serial.println("OTA update failed!");
-        client.publish(mqtt_pub_topic, "OTA update failed, restarting with last firmware");
+        char message[64];  
+        snprintf(message, sizeof(message), "%s,OTA Update Failed!", DEVICE_ID);  
+        client.publish(mqtt_pub_topic, message);
       }
     } else {
       Serial.println("OTA begin failed!");
-      client.publish(mqtt_pub_topic, "OTA begin failed, restarting with last firmware");
+      char message[64];  
+      snprintf(message, sizeof(message), "%s,OTA Begin Failed!", DEVICE_ID);  
+      client.publish(mqtt_pub_topic, message);
     }
   } else {
     Serial.printf("HTTP request failed, error: %s\n", http.errorToString(httpCode).c_str());
-    client.publish(mqtt_pub_topic, "OTA HTTP request failed, restarting with last firmware");
+    char message[64];  
+    snprintf(message, sizeof(message), "%s,HTTP Request Failed", DEVICE_ID);  
+    client.publish(mqtt_pub_topic, message);
   }
 
   http.end();
 
-  vTaskDelay(1000 / portTICK_PERIOD_MS); // Allow MQTT message to send
+  vTaskDelay(1000 / portTICK_PERIOD_MS); 
   ESP.restart();
 
-  otaTaskHandle = NULL;  // Clear task handle
-  vTaskDelete(NULL);  // Delete OTA task
+  otaTaskHandle = NULL; 
+  vTaskDelete(NULL);
 }
+*/
+
+void otaTask(void *parameter) {
+  Serial.println("Starting OTA update...");
+
+  HTTPClient http;
+  http.begin(ota_url);
+  int httpCode = http.GET();
+
+  if (httpCode == HTTP_CODE_OK) {
+    int contentLength = http.getSize();
+    Serial.printf("Content-Length: %d bytes\n", contentLength);
+    
+    if (Update.begin(contentLength)) {
+      Update.writeStream(http.getStream());
+      if (Update.end() && Update.isFinished()) {
+        Serial.println("OTA update completed. Restarting...");
+        char message[64];  
+        snprintf(message, sizeof(message), "%s,OTA update successful", DEVICE_ID);  
+        client.publish(mqtt_pub_topic, message);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        http.end();
+        ESP.restart();
+      } else {
+        Serial.println("OTA update failed!");
+        char message[64];  
+        snprintf(message, sizeof(message), "%s,OTA Update Failed!", DEVICE_ID);  
+        client.publish(mqtt_pub_topic, message);
+      }
+    } else {
+      Serial.println("OTA begin failed!");
+      char message[64];  
+      snprintf(message, sizeof(message), "%s,OTA Begin Failed!", DEVICE_ID);  
+      client.publish(mqtt_pub_topic, message);
+    }
+  } else {
+    Serial.printf("HTTP request failed, error: %s\n", http.errorToString(httpCode).c_str());
+    char message[64];  
+    snprintf(message, sizeof(message), "%s,HTTP Request Failed", DEVICE_ID);  
+    client.publish(mqtt_pub_topic, message);
+  }
+
+  http.end();
+  vTaskDelay(2000 / portTICK_PERIOD_MS);
+  
+  ESP.restart();
+
+  otaTaskHandle = NULL;  
+  vTaskDelete(NULL);
+}
+
+
 /*
 void mainTask(void *param) {
   for (;;) {
