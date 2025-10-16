@@ -2,28 +2,34 @@
 #include <WiFi.h>
 #include <WiFiManager.h>  // WiFiManager library
 #include <PubSubClient.h>
-// #include <FastLED.h>
+#include <FastLED.h>
 #include <HTTPClient.h>
-#include <RCSwitch.h>
-RCSwitch mySwitch = RCSwitch();
+// #include <RCSwitch.h>
+// RCSwitch mySwitch = RCSwitch();
 
 #include <Preferences.h>
 Preferences preferences; // Create a Preferences object
 
 void otaTask(void *param);
+void wifiResetTask(void *param);
+void networkTask(void *param);
+void mainTask(void *param);
+void reconnectWiFi();
+void reconnectMQTT();
+void mqttCallback(char* topic, byte* payload, unsigned int length);
 
-#include <map>
-std::map<unsigned long, unsigned long> lastRFReceivedTimeMap;
-unsigned long lastRFGlobalReceivedTime = 0;  // Global debounce
+// #include <map>
+// std::map<unsigned long, unsigned long> lastRFReceivedTimeMap;
+// unsigned long lastRFGlobalReceivedTime = 0;  // Global debounce
 
-#define RF_PIN 25  
-#define SW_PIN1 18  
-#define SW_PIN2 19  
-#define SW_PIN3 22  
-#define SW_PIN4 23
+// #define RF_PIN 25  
+#define SW_PIN1 33  
+#define SW_PIN2 32  
+#define SW_PIN3 35  
+#define SW_PIN4 34
 
 // Configuration Section
-#define Fast_LED false
+#define Fast_LED 1
 #define DEBUG_MODE true
 #define DEBUG_PRINT(x)  if (DEBUG_MODE) { Serial.print(x); }
 #define DEBUG_PRINTLN(x) if (DEBUG_MODE) { Serial.println(x); }
@@ -33,8 +39,8 @@ unsigned long lastRFGlobalReceivedTime = 0;  // Global debounce
 #if CHANGE_DEICE_ID
 #define WORK_PACKAGE "1225"
 #define GW_TYPE "10"
-#define FIRMWARE_UPDATE_DATE "250212" 
-#define DEVICE_SERIAL "0006"
+#define FIRMWARE_UPDATE_DATE "251015" 
+#define DEVICE_SERIAL "0000"
 //#define DEVICE_ID WORK_PACKAGE GW_TYPE FIRMWARE_UPDATE_DATE DEVICE_SERIAL
 #endif
 
@@ -49,7 +55,7 @@ const char* DEVICE_ID;
 #define WIFI_WAIT_COUNT 60
 #define WIFI_WAIT_DELAY 1000
 #define MAX_WIFI_ATTEMPTS 2
-#define MQTT_ATTEMPT_COUNT 10
+#define MQTT_ATTEMPT_COUNT 12
 #define MQTT_ATTEMPT_DELAY 5000
 
 int wifiAttemptCount = WIFI_ATTEMPT_COUNT;
@@ -63,12 +69,12 @@ const char* mqtt_password = "Secret!@#$1234";
 const char* mqtt_hb_topic = "DMA/SmartSwitch/HB";
 const char* mqtt_pub_topic = "DMA/SmartSwitch/PUB";
 const char* mqtt_sub_topic = "DMA/SmartSwitch/SUB";
-const char* ota_url = "https://raw.githubusercontent.com/DataSoft-Manufacturing-and-Assembly/DMA-SmartSwitch_Reza/with-ota/ota/firmware.bin";
+const char* ota_url = "https://raw.githubusercontent.com/DataSoft-Manufacturing-and-Assembly/DMA-SmartSwitch_Reza/main/ota/firmware.bin";
 
 #if Fast_LED
-#define DATA_PIN 4
-#define NUM_LEDS 1
-CRGB leds[NUM_LEDS];
+  #define DATA_PIN 27
+  #define NUM_LEDS 1
+  CRGB leds[NUM_LEDS];
 #endif
 
 WiFiManager wm;
@@ -77,7 +83,7 @@ PubSubClient client(espClient);
 
 TaskHandle_t networkTaskHandle;
 TaskHandle_t mainTaskHandle;
-TaskHandle_t wifiResetTaskHandle;
+TaskHandle_t wifiResetTaskHandle = NULL;
 TaskHandle_t otaTaskHandle = NULL;
 
 #define WIFI_RESET_BUTTON_PIN 0
@@ -86,6 +92,10 @@ bool wifiResetFlag = false;
 // Function to reconnect to WiFi
 void reconnectWiFi() {
   // digitalWrite(LED_PIN, HIGH);
+  #if Fast_LED
+    leds[0] = CRGB::Red;
+    FastLED.show();
+  #endif
   if (WiFi.status() != WL_CONNECTED) {
     if (wifiAttemptCount > 0) {
       DEBUG_PRINTLN("Attempting WiFi connection...");
@@ -116,8 +126,8 @@ void reconnectWiFi() {
 void reconnectMQTT() {
   if (!client.connected()) {
     #if Fast_LED
-    leds[0] = CRGB::Yellow;
-    FastLED.show();
+      leds[0] = CRGB::Yellow;
+      FastLED.show();
     #endif
 
     char clientId[24];
@@ -129,8 +139,8 @@ void reconnectMQTT() {
         DEBUG_PRINTLN("MQTT connected");
 
         #if Fast_LED
-        leds[0] = CRGB::Black;
-        FastLED.show();
+          leds[0] = CRGB::Black;
+          FastLED.show();
         #endif
         char topic[48];
 
@@ -139,6 +149,7 @@ void reconnectMQTT() {
       } else {
         DEBUG_PRINTLN("MQTT connection failed");
         mqttAttemptCount--;
+        DEBUG_PRINTLN("Remaining MQTT attempts: " + String(mqttAttemptCount));
         vTaskDelay(pdMS_TO_TICKS(MQTT_ATTEMPT_DELAY));
       }
     } else {
@@ -168,6 +179,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     char data[32];
     snprintf(data, sizeof(data), "%s,sw1:1", DEVICE_ID); 
     client.publish(mqtt_pub_topic, data);
+
+    #if Fast_LED
+      leds[0] = CRGB::Green;
+      FastLED.show();
+      vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+      leds[0] = CRGB::Black;
+      FastLED.show();
+    #endif
     DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data))
   } 
   else if (message == "sw1:0") {
@@ -177,6 +196,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       char data[32];
       snprintf(data, sizeof(data), "%s,sw1:0", DEVICE_ID); 
       client.publish(mqtt_pub_topic, data);
+
+      #if Fast_LED
+        leds[0] = CRGB::DeepPink;
+        FastLED.show();
+        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+        leds[0] = CRGB::Black;
+        FastLED.show();
+      #endif
       DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
   }
 
@@ -187,6 +214,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       char data[32];
       snprintf(data, sizeof(data), "%s,sw2:1", DEVICE_ID); 
       client.publish(mqtt_pub_topic, data);
+
+      #if Fast_LED
+        leds[0] = CRGB::Green;
+        FastLED.show();
+        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+        leds[0] = CRGB::Black;
+        FastLED.show();
+      #endif
       DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
   } 
   else if (message == "sw2:0") {
@@ -196,6 +231,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       char data[32];
       snprintf(data, sizeof(data), "%s,sw2:0", DEVICE_ID); 
       client.publish(mqtt_pub_topic, data);
+
+      #if Fast_LED
+        leds[0] = CRGB::DeepPink;
+        FastLED.show();
+        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+        leds[0] = CRGB::Black;
+        FastLED.show();
+      #endif
       DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
   }
 
@@ -206,6 +249,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       char data[32];
       snprintf(data, sizeof(data), "%s,sw3:1", DEVICE_ID); 
       client.publish(mqtt_pub_topic, data);
+
+      #if Fast_LED
+        leds[0] = CRGB::Green;
+        FastLED.show();
+        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+        leds[0] = CRGB::Black;
+        FastLED.show();
+      #endif
       DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
   } 
   else if (message == "sw3:0") {
@@ -215,6 +266,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       char data[32];
       snprintf(data, sizeof(data), "%s,sw3:0", DEVICE_ID); 
       client.publish(mqtt_pub_topic, data);
+
+      #if Fast_LED
+        leds[0] = CRGB::DeepPink;
+        FastLED.show();
+        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+        leds[0] = CRGB::Black;
+        FastLED.show();
+      #endif
       DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
   }
 
@@ -225,6 +284,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       char data[32];
       snprintf(data, sizeof(data), "%s,sw4:1", DEVICE_ID); 
       client.publish(mqtt_pub_topic, data);
+
+      #if Fast_LED
+        leds[0] = CRGB::Green;
+        FastLED.show();
+        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+        leds[0] = CRGB::Black;
+        FastLED.show();
+      #endif
       DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
   } 
   else if (message == "sw4:0") {
@@ -234,6 +301,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       char data[32];
       snprintf(data, sizeof(data), "%s,sw4:0", DEVICE_ID); 
       client.publish(mqtt_pub_topic, data);
+
+      #if Fast_LED
+        leds[0] = CRGB::DeepPink;
+        FastLED.show();
+        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+        leds[0] = CRGB::Black;
+        FastLED.show();
+      #endif
       DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
   }
   preferences.end();  // Close Preferences storage
@@ -243,9 +318,17 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     DEBUG_PRINTLN("Request for ping");
     char pingData[100]; // Increased size for additional info
     snprintf(pingData, sizeof(pingData), "%s,%s,%s,%d,%d",
-             DEVICE_ID, WiFi.SSID().c_str(),
-             WiFi.localIP().toString().c_str(), WiFi.RSSI(), HB_INTERVAL);
+      DEVICE_ID, WiFi.SSID().c_str(),
+      WiFi.localIP().toString().c_str(), WiFi.RSSI(), HB_INTERVAL);
     client.publish(mqtt_pub_topic, pingData);
+
+    #if Fast_LED
+      leds[0] = CRGB::Blue;
+      FastLED.show();
+      vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+      leds[0] = CRGB::Black;
+      FastLED.show();
+    #endif
 
     DEBUG_PRINT("Sent ping response to MQTT: ");
     DEBUG_PRINTLN(pingData);
@@ -282,92 +365,39 @@ void networkTask(void *param) {
 
 //Start WiFi reset task
 void wifiResetTask(void *param) {
+  DEBUG_PRINTLN("WiFi Reset Task started, resetting WiFi settings...");
   for (;;) {
-    if (digitalRead(WIFI_RESET_BUTTON_PIN) == LOW) {
-      unsigned long pressStartTime = millis();
-      DEBUG_PRINTLN("Button Pressed....");
+    leds[0] = CRGB::Green;
+    FastLED.show();
+    vTaskSuspend(networkTaskHandle);
+    vTaskSuspend(mainTaskHandle);
+    wm.resetSettings();
+    wm.autoConnect("DMA_Smart_Switch");
+    ESP.restart();
 
-      #if Fast_LED
-      leds[0] = CRGB::Blue;
-      FastLED.show();
-      #endif
-
-      while (digitalRead(WIFI_RESET_BUTTON_PIN) == LOW) {
-        if (millis() - pressStartTime >= 5000) {
-          DEBUG_PRINTLN("5 seconds holding time reached, starting WiFiManager...");
-          vTaskSuspend(networkTaskHandle);
-          vTaskSuspend(mainTaskHandle);
-          wm.resetSettings();
-          wm.autoConnect("DMA_Smart_Switch");
-          ESP.restart();
-        }
-        vTaskDelay(pdMS_TO_TICKS(100));
-      }
-    } else {
-      #if Fast_LED
-      leds[0] = CRGB::Black;
-      FastLED.show();
-      #endif
-    }
-
-    vTaskDelay(pdMS_TO_TICKS(100));
+    wifiResetTaskHandle = NULL;  
+    vTaskDelete(NULL);
   }
 }
 //=================================
 
-//Start OTA Task
-/*
+// Start OTA Task
 void otaTask(void *parameter) {
   Serial.println("Starting OTA update...");
 
-  HTTPClient http;
-  http.begin(ota_url);
-  int httpCode = http.GET();
-
-  if (httpCode == HTTP_CODE_OK) {
-    int contentLength = http.getSize();
-    Serial.printf("Content-Length: %d bytes\n", contentLength);
-    
-    if (Update.begin(contentLength)) {
-      Update.writeStream(http.getStream());
-      if (Update.end() && Update.isFinished()) {
-        Serial.println("OTA update completed. Restarting...");
-        char message[64];  
-        snprintf(message, sizeof(message), "%s,OTA update successful", DEVICE_ID);  
-        client.publish(mqtt_pub_topic, message);
-        vTaskDelay(1000 / portTICK_PERIOD_MS); 
-        ESP.restart();
-      } else {
-        Serial.println("OTA update failed!");
-        char message[64];  
-        snprintf(message, sizeof(message), "%s,OTA Update Failed!", DEVICE_ID);  
-        client.publish(mqtt_pub_topic, message);
-      }
-    } else {
-      Serial.println("OTA begin failed!");
-      char message[64];  
-      snprintf(message, sizeof(message), "%s,OTA Begin Failed!", DEVICE_ID);  
-      client.publish(mqtt_pub_topic, message);
-    }
-  } else {
-    Serial.printf("HTTP request failed, error: %s\n", http.errorToString(httpCode).c_str());
-    char message[64];  
-    snprintf(message, sizeof(message), "%s,HTTP Request Failed", DEVICE_ID);  
-    client.publish(mqtt_pub_topic, message);
-  }
-
-  http.end();
-
-  vTaskDelay(1000 / portTICK_PERIOD_MS); 
-  ESP.restart();
-
-  otaTaskHandle = NULL; 
-  vTaskDelete(NULL);
-}
-*/
-
-void otaTask(void *parameter) {
-  Serial.println("Starting OTA update...");
+  #if Fast_LED
+    leds[0] = CRGB::Green;
+    FastLED.show();
+    vTaskDelay(pdMS_TO_TICKS(250)); // Short delay to indicate status
+    leds[0] = CRGB::Black;
+    FastLED.show();
+    vTaskDelay(pdMS_TO_TICKS(250)); // Short delay to indicate status
+    leds[0] = CRGB::Green;
+    FastLED.show();
+    vTaskDelay(pdMS_TO_TICKS(250)); // Short delay to indicate status
+    leds[0] = CRGB::Black;
+    FastLED.show();
+  #endif
 
   HTTPClient http;
   http.begin(ota_url);
@@ -414,67 +444,7 @@ void otaTask(void *parameter) {
   otaTaskHandle = NULL;  
   vTaskDelete(NULL);
 }
-
-
-/*
-void mainTask(void *param) {
-  for (;;) {
-    static unsigned long last_hb_send_time = 0;
-    if (millis() - last_hb_send_time >= HB_INTERVAL) {
-      last_hb_send_time = millis();
-      if (client.connected()) {
-        char hb_data[50];
-        snprintf(hb_data, sizeof(hb_data), "%s,wifi_connected", DEVICE_ID);
-        client.publish(mqtt_hb_topic, hb_data);
-        DEBUG_PRINTLN("Heartbeat sent Successfully");
-        #if Fast_LED
-        leds[0] = CRGB::Blue;
-        FastLED.show();
-        #endif
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        #if Fast_LED
-        leds[0] = CRGB::Black;
-        FastLED.show();
-        #endif
-      } else {
-        DEBUG_PRINTLN("Failed to publish Heartbeat on MQTT");
-      }
-    }
-
-    
-    static unsigned long last_data_send_time = 0;
-    if (millis() - last_data_send_time >= DATA_INTERVAL) {
-      last_data_send_time = millis();
-      #if Fast_LED
-      leds[0] = CRGB::Green;
-      FastLED.show();
-      #endif
-      vTaskDelay(pdMS_TO_TICKS(1000));
-      #if Fast_LED
-      leds[0] = CRGB::Black;
-      FastLED.show();
-      #endif
-    }
-    
-
-    if (mySwitch.available()) {
-      unsigned long receivedCode = mySwitch.getReceivedValue();
-      Serial.print("Received RF Code: ");
-      Serial.println(receivedCode);
-  
-      char data[32];
-      snprintf(data, sizeof(data), "%s,%lu", DEVICE_ID, receivedCode); 
-  
-      client.publish(mqtt_pub_topic, data);
-      mySwitch.resetAvailable();
-  }
-  
-
-    vTaskDelay(pdMS_TO_TICKS(1000));
-  }
-}
-
-*/
+//=================================
 
 // Start Main Task
 void mainTask(void *param) {
@@ -495,48 +465,47 @@ void mainTask(void *param) {
         DEBUG_PRINTLN("Heartbeat sent Successfully");
 
         #if Fast_LED
-        leds[0] = CRGB::Blue;
-        FastLED.show();
-        vTaskDelay(pdMS_TO_TICKS(100)); // Short delay to indicate status
-        leds[0] = CRGB::Black;
-        FastLED.show();
+          leds[0] = CRGB::Blue;
+          FastLED.show();
+          vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+          leds[0] = CRGB::Black;
+          FastLED.show();
         #endif
       } else {
         DEBUG_PRINTLN("Failed to publish Heartbeat on MQTT");
       }
     }
 
-    // **Handle RF Signal Reception with Debounce**
-    // if (mySwitch.available()) {
-    //   unsigned long receivedCode = mySwitch.getReceivedValue();
-    //   int bitLength = mySwitch.getReceivedBitlength(); // Get bit length of the received signal
+    if (digitalRead(WIFI_RESET_BUTTON_PIN) == LOW) {
+      unsigned long pressStartTime = millis();
+      DEBUG_PRINTLN("Button Pressed....");
 
-    //   // **Ignore signals that do not match the expected bit length (e.g., < 24 bits)**
-    //   if (bitLength < 24) {  
-    //     DEBUG_PRINTLN(String("Ignored RF Signal: ") + String(receivedCode) + " (Bits: " + String(bitLength) + ")");
-    //     mySwitch.resetAvailable();
-    //     continue;
-    //   }
+      #if Fast_LED
+        leds[0] = CRGB::Blue;
+        FastLED.show();
+      #endif
 
-    //   // **Debounce Check: Ignore Repeats Within 500ms**
-    //   if (receivedCode != lastReceivedCode || now - lastReceivedTime > 500) {  
-    //     lastReceivedTime = now;
-    //     lastReceivedCode = receivedCode;
+      while (digitalRead(WIFI_RESET_BUTTON_PIN) == LOW) {
+        if (millis() - pressStartTime >= 5000) {
+          DEBUG_PRINTLN("5 seconds holding time reached, starting WiFiManager...");
+          
+          if(wifiResetTaskHandle == NULL) {
+            xTaskCreatePinnedToCore(wifiResetTask, "WiFi Reset Task", 8*1024, NULL, 1, &wifiResetTaskHandle, 1);
+          }
+          else{
+            Serial.println("WiFi Reset Task already running.");
+          }
+          vTaskDelay(pdMS_TO_TICKS(100));
+        }
+      }
+      #if Fast_LED
+        leds[0] = CRGB::Black;
+        FastLED.show();
+      #endif
+    }
     
-    //     // Correct Debug Print with Macro
-    //     DEBUG_PRINTLN(String("RF Received: ") + String(receivedCode));
-    
-    //     char data[50];
-    //     snprintf(data, sizeof(data), "%s,%lu", DEVICE_ID, receivedCode); 
-    //     client.publish(mqtt_pub_topic, data);
-    
-    //     // Correct Debug Print for MQTT Data
-    //     DEBUG_PRINTLN(String("Data Sent to MQTT: ") + String(data));
-    //   }
-    
-    //   mySwitch.resetAvailable();
-    // }
-    
+    /*
+    // **RF Signal Handling with Debounce and Bit Length Check**
     if (mySwitch.available()) {
       unsigned long receivedCode = mySwitch.getReceivedValue();
       int bitLength = mySwitch.getReceivedBitlength(); // Get bit length of the received signal
@@ -573,8 +542,9 @@ void mainTask(void *param) {
 
       mySwitch.resetAvailable();
     }
+      */
 
-    vTaskDelay(pdMS_TO_TICKS(10)); // Keep FreeRTOS responsive
+    vTaskDelay(pdMS_TO_TICKS(100)); // Keep FreeRTOS responsive
   }
 }
 
@@ -585,7 +555,7 @@ void setup() {
   preferences.begin("device_data", false);  // Open Preferences (NVS)
   static String device_id; // Static variable to persist scope
   
-  #if CHANGE_DEVICE_ID
+  #if CHANGE_DEICE_ID
     // Construct new device ID
     device_id = String(WORK_PACKAGE) + GW_TYPE + FIRMWARE_UPDATE_DATE + DEVICE_SERIAL;
     
@@ -606,14 +576,18 @@ void setup() {
   DEBUG_PRINTLN(DEVICE_ID);
   
   #if Fast_LED
-  FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
-  leds[0] = CRGB::Black;
-  FastLED.show();
+    FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
+    leds[0] = CRGB::HotPink;
+    FastLED.show();
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    leds[0] = CRGB::Black;
+    FastLED.show();
   #endif
 
   pinMode(WIFI_RESET_BUTTON_PIN, INPUT_PULLUP);
 
-  mySwitch.enableReceive(digitalPinToInterrupt(RF_PIN));
+  // mySwitch.enableReceive(digitalPinToInterrupt(RF_PIN));
 
   pinMode(SW_PIN1, OUTPUT);
   pinMode(SW_PIN2, OUTPUT);
@@ -639,7 +613,7 @@ void setup() {
 
   xTaskCreatePinnedToCore(networkTask, "Network Task", 8*1024, NULL, 1, &networkTaskHandle, 0);
   xTaskCreatePinnedToCore(mainTask, "Main Task", 16*1024, NULL, 1, &mainTaskHandle, 1);
-  xTaskCreatePinnedToCore(wifiResetTask, "WiFi Reset Task", 8*1024, NULL, 1, &wifiResetTaskHandle, 1);
+  // xTaskCreatePinnedToCore(wifiResetTask, "WiFi Reset Task", 8*1024, NULL, 1, &wifiResetTaskHandle, 1);
 }
 
 void loop(){

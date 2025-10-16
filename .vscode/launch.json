@@ -12,9 +12,9 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "c:/Users/DMA/OneDrive/Desktop/FirmWares/DMA_SmartSwitch_Reza/.pio/build/esp32dev/firmware.elf",
+            "executable": "C:/Users/AIUB/Desktop/Firmwares/DMA-SmartSwitch_Reza/.pio/build/esp32dev/firmware.elf",
             "projectEnvName": "esp32dev",
-            "toolchainBinDir": "C:/Users/DMA/.platformio/packages/toolchain-xtensa-esp32/bin",
+            "toolchainBinDir": "C:/Users/AIUB/.platformio/packages/toolchain-xtensa-esp32/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "preLaunchTask": {
                 "type": "PlatformIO",
@@ -25,18 +25,18 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "c:/Users/DMA/OneDrive/Desktop/FirmWares/DMA_SmartSwitch_Reza/.pio/build/esp32dev/firmware.elf",
+            "executable": "C:/Users/AIUB/Desktop/Firmwares/DMA-SmartSwitch_Reza/.pio/build/esp32dev/firmware.elf",
             "projectEnvName": "esp32dev",
-            "toolchainBinDir": "C:/Users/DMA/.platformio/packages/toolchain-xtensa-esp32/bin",
+            "toolchainBinDir": "C:/Users/AIUB/.platformio/packages/toolchain-xtensa-esp32/bin",
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (without uploading)",
-            "executable": "c:/Users/DMA/OneDrive/Desktop/FirmWares/DMA_SmartSwitch_Reza/.pio/build/esp32dev/firmware.elf",
+            "executable": "C:/Users/AIUB/Desktop/Firmwares/DMA-SmartSwitch_Reza/.pio/build/esp32dev/firmware.elf",
             "projectEnvName": "esp32dev",
-            "toolchainBinDir": "C:/Users/DMA/.platformio/packages/toolchain-xtensa-esp32/bin",
+            "toolchainBinDir": "C:/Users/AIUB/.platformio/packages/toolchain-xtensa-esp32/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "loadMode": "manual"
         }
