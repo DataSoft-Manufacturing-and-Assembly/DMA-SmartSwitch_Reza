@@ -10,7 +10,6 @@
             "includePath": [
                 "C:/Users/AIUB/Desktop/Firmwares/DMA-SmartSwitch_Reza/include",
                 "C:/Users/AIUB/Desktop/Firmwares/DMA-SmartSwitch_Reza/src",
-                "C:/Users/AIUB/Desktop/Firmwares/DMA-SmartSwitch_Reza/lib/rc-switch",
                 "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src",
                 "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/HTTPClient/src",
                 "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/WiFiClientSecure/src",
@@ -220,6 +219,7 @@
                 "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/dio_qspi/include",
                 "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/cores/esp32",
                 "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/variants/esp32",
+                "C:/Users/AIUB/Desktop/Firmwares/DMA-SmartSwitch_Reza/lib/rc-switch",
                 "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/ArduinoOTA/src",
                 "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/AsyncUDP/src",
                 "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/BLE/src",
@@ -250,7 +250,6 @@
                 "path": [
                     "C:/Users/AIUB/Desktop/Firmwares/DMA-SmartSwitch_Reza/include",
                     "C:/Users/AIUB/Desktop/Firmwares/DMA-SmartSwitch_Reza/src",
-                    "C:/Users/AIUB/Desktop/Firmwares/DMA-SmartSwitch_Reza/lib/rc-switch",
                     "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src",
                     "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/HTTPClient/src",
                     "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/WiFiClientSecure/src",
@@ -460,6 +459,7 @@
                     "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/dio_qspi/include",
                     "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/cores/esp32",
                     "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/variants/esp32",
+                    "C:/Users/AIUB/Desktop/Firmwares/DMA-SmartSwitch_Reza/lib/rc-switch",
                     "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/ArduinoOTA/src",
                     "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/AsyncUDP/src",
                     "C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/BLE/src",

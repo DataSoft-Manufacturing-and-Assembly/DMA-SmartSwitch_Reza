@@ -23,10 +23,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length);
 // unsigned long lastRFGlobalReceivedTime = 0;  // Global debounce
 
 // #define RF_PIN 25  
-#define SW_PIN1 33  
-#define SW_PIN2 32  
-#define SW_PIN3 35  
-#define SW_PIN4 34
+#define SW_PIN1 16  
+#define SW_PIN2 17  
+#define SW_PIN3 32 
+#define SW_PIN4 33
 
 // Configuration Section
 #define Fast_LED 1
@@ -40,7 +40,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length);
 #define WORK_PACKAGE "1225"
 #define GW_TYPE "10"
 #define FIRMWARE_UPDATE_DATE "251015" 
-#define DEVICE_SERIAL "0000"
+#define DEVICE_SERIAL "0009"
 //#define DEVICE_ID WORK_PACKAGE GW_TYPE FIRMWARE_UPDATE_DATE DEVICE_SERIAL
 #endif
 
@@ -300,6 +300,58 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       preferences.putBool("sw4", false);
       char data[32];
       snprintf(data, sizeof(data), "%s,sw4:0", DEVICE_ID); 
+      client.publish(mqtt_pub_topic, data);
+
+      #if Fast_LED
+        leds[0] = CRGB::DeepPink;
+        FastLED.show();
+        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+        leds[0] = CRGB::Black;
+        FastLED.show();
+      #endif
+      DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
+  }
+
+  //Handle All Switches Together
+  if (message == "sw1234:1") {
+      DEBUG_PRINTLN("Switch-1234: On");
+      digitalWrite(SW_PIN1, HIGH);
+      digitalWrite(SW_PIN2, HIGH);
+      digitalWrite(SW_PIN3, HIGH);
+      digitalWrite(SW_PIN4, HIGH);
+
+      preferences.putBool("sw1", true);
+      preferences.putBool("sw2", true);
+      preferences.putBool("sw3", true);
+      preferences.putBool("sw4", true);
+
+      char data[32];
+      snprintf(data, sizeof(data), "%s,sw1234:1", DEVICE_ID); 
+      client.publish(mqtt_pub_topic, data);
+
+      #if Fast_LED
+        leds[0] = CRGB::Green;
+        FastLED.show();
+        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+        leds[0] = CRGB::Black;
+        FastLED.show();
+      #endif
+      DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
+  } 
+  else if (message == "sw1234:0") {
+      DEBUG_PRINTLN("Switch-1234: Off");
+      digitalWrite(SW_PIN1, LOW);
+      digitalWrite(SW_PIN2, LOW);
+      digitalWrite(SW_PIN3, LOW);
+      digitalWrite(SW_PIN4, LOW);
+
+      preferences.putBool("sw1", false);
+      preferences.putBool("sw2", false);
+      preferences.putBool("sw3", false);
+      preferences.putBool("sw4", false);
+
+      char data[32];
+      snprintf(data, sizeof(data), "%s,sw1234:0", DEVICE_ID); 
       client.publish(mqtt_pub_topic, data);
 
       #if Fast_LED
