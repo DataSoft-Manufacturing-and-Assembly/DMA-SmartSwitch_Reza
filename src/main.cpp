@@ -188,6 +188,15 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     message += (char)payload[i];
   }
 
+  #ifdef USE_Fast_LED
+    leds[0] = CRGB::Blue;
+    FastLED.show();
+    vTaskDelay(pdMS_TO_TICKS(250)); // Short delay to indicate status
+    leds[0] = CRGB::Black;
+    FastLED.show();
+    vTaskDelay(pdMS_TO_TICKS(250));
+  #endif
+
   DEBUG_PRINTLN("Message arrived on topic: " + String(topic));
   DEBUG_PRINTLN("Message content: " + message);
 
@@ -392,11 +401,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     char pingData[100]; // Increased size for additional info
     snprintf(pingData, sizeof(pingData), "%s,%s,%s,%d,%d,%s,%s",
       DEVICE_ID, WiFi.SSID().c_str(),
-      WiFi.localIP().toString().c_str(), WiFi.RSSI(), HB_INTERVAL,FIRMWARE_VERSION,FIRMWARE_UPDATE_DATE);
+      WiFi.localIP().toString().c_str(), WiFi.RSSI(), HB_INTERVAL,FIRMWARE_VERSION,FIRMWARE_RELEASE_DATE);
     client.publish(mqtt_ack_topic, pingData);
 
     #ifdef USE_Fast_LED
-      leds[0] = CRGB::Blue;
+      leds[0] = CRGB::Green;
       FastLED.show();
       vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
       leds[0] = CRGB::Black;
@@ -414,6 +423,20 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     char message[64];  
     snprintf(message, sizeof(message), "%s,Device Restarting", DEVICE_ID);  
     client.publish(mqtt_ack_topic, message);
+
+    #ifdef USE_Fast_LED
+      leds[0] = CRGB::Red;
+      FastLED.show();
+      vTaskDelay(pdMS_TO_TICKS(250)); // Short delay to indicate status
+      leds[0] = CRGB::Black;
+      vTaskDelay(pdMS_TO_TICKS(250));
+      leds[0] = CRGB::Red;
+      vTaskDelay(pdMS_TO_TICKS(250)); // Short delay to indicate status
+      leds[0] = CRGB::Black;
+      FastLED.show();
+    #endif
+
+    DEBUG_PRINTLN("Restarting now...");
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     ESP.restart();
   }
@@ -480,7 +503,7 @@ void wifiResetTask(void *param) {
     wm.setConfigPortalTimeout(180);  // timeout in seconds
 
     // Start autoConnect with timeout
-    if (!wm.autoConnect("DMA_MoreChick")) {
+    if (!wm.autoConnect("DMA_SmartSwitch_Config")) {
       DEBUG_PRINTLN("WiFi config portal timed out!");
       // Handle fallback, e.g., restart or continue offline
       ESP.restart();

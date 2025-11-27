@@ -8,7 +8,7 @@
 //=============================================================//
 
 #define FIRMWARE_VERSION "WiFi-2.11.0"
-#define FIRMWARE_UPDATE_DATE "27-Nov-2025"
+#define FIRMWARE_RELEASE_DATE "27-Nov-2025"
 //=============================================================//
 
 // Include necessary libraries
@@ -39,7 +39,7 @@
     #define WORK_PACKAGE "1225"
     #define GW_TYPE "10"
     #define FIRMWARE_UPDATE_DATE "251015" 
-    #define DEVICE_SERIAL "0097"
+    #define DEVICE_SERIAL "0022"
     //#define DEVICE_ID WORK_PACKAGE GW_TYPE FIRMWARE_UPDATE_DATE DEVICE_SERIAL
 #endif
 
