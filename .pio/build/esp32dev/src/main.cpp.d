@@ -1,4 +1,4 @@
-.pio/build/esp32dev/src/main.cpp.o: src/main.cpp \
+.pio/build/esp32dev/src/main.cpp.o: src/main.cpp include/config.h \
  C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/cores/esp32/Arduino.h \
  C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp_arduino_version.h \
  C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include/freertos/FreeRTOS.h \
@@ -335,4 +335,5 @@
  C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/mbedtls/port/include/aes/esp_aes.h \
  C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/hal/include/hal/aes_types.h \
  C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/mbedtls/mbedtls/include/mbedtls/error.h \
+ C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_system/include/esp_task_wdt.h \
  C:/Users/AIUB/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src/Preferences.h
