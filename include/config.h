@@ -4,7 +4,14 @@
 #define HB_INTERVAL 5*60*1000
 // #define DATA_INTERVAL 15*1000
 #define CONFIG_TASK_WDT_DEBUG 1
+#define WIFI_RESET_BUTTON_PIN 0
+//=============================================================//
 
+#define FIRMWARE_VERSION "WiFi-2.11.0"
+#define FIRMWARE_UPDATE_DATE "27-Nov-2025"
+//=============================================================//
+
+// Include necessary libraries
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WiFiManager.h>  // WiFiManager library
@@ -73,6 +80,8 @@ const char* mqtt_password = "Secret!@#$1234";
 const char* mqtt_hb_topic = "DMA/SmartSwitch/HB";
 const char* mqtt_pub_topic = "DMA/SmartSwitch/PUB";
 const char* mqtt_sub_topic = "DMA/SmartSwitch/SUB";
+const char* mqtt_ack_topic = "DMA/SmartSwitch/ACK";
+const char* mqtt_ota_topic = "DMA/SmartSwitch/OTA";
 const char* ota_url = "https://raw.githubusercontent.com/DataSoft-Manufacturing-and-Assembly/DMA-SmartSwitch_Reza/main/ota/firmware.bin";
 //=============================================================//
 
@@ -96,5 +105,5 @@ TaskHandle_t mainTaskHandle;
 TaskHandle_t wifiResetTaskHandle = NULL;
 TaskHandle_t otaTaskHandle = NULL;
 
-#define WIFI_RESET_BUTTON_PIN 0
 bool wifiResetFlag = false;
+//=============================================================//
