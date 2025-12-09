@@ -156,7 +156,7 @@ void reconnectMQTT() {
 
     if (mqttAttemptCount > 0) {
       DEBUG_PRINTLN("Attempting MQTT connection...");
-      if (client.connect(clientId, mqtt_user, mqtt_password)) {
+      if (client.connect(clientId)) {
         DEBUG_PRINTLN("MQTT connected");
 
         #ifdef USE_Fast_LED
@@ -208,7 +208,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     preferences.putBool("sw1", true);  // Save state
     char data[32];
     snprintf(data, sizeof(data), "%s,sw1:1", DEVICE_ID); 
-    client.publish(mqtt_pub_topic, data);
+    client.publish(mqtt_ack_topic, data);
 
     #ifdef USE_Fast_LED
       leds[0] = CRGB::Green;
@@ -225,7 +225,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       preferences.putBool("sw1", false); 
       char data[32];
       snprintf(data, sizeof(data), "%s,sw1:0", DEVICE_ID); 
-      client.publish(mqtt_pub_topic, data);
+      client.publish(mqtt_ack_topic, data);
 
       #ifdef USE_Fast_LED
         leds[0] = CRGB::DeepPink;
@@ -243,7 +243,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       preferences.putBool("sw2", true);
       char data[32];
       snprintf(data, sizeof(data), "%s,sw2:1", DEVICE_ID); 
-      client.publish(mqtt_pub_topic, data);
+      client.publish(mqtt_ack_topic, data);
 
       #ifdef USE_Fast_LED
         leds[0] = CRGB::Green;
@@ -260,7 +260,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       preferences.putBool("sw2", false);
       char data[32];
       snprintf(data, sizeof(data), "%s,sw2:0", DEVICE_ID); 
-      client.publish(mqtt_pub_topic, data);
+      client.publish(mqtt_ack_topic, data);
 
       #ifdef USE_Fast_LED
         leds[0] = CRGB::DeepPink;
@@ -278,7 +278,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       preferences.putBool("sw3", true);
       char data[32];
       snprintf(data, sizeof(data), "%s,sw3:1", DEVICE_ID); 
-      client.publish(mqtt_pub_topic, data);
+      client.publish(mqtt_ack_topic, data);
 
       #ifdef USE_Fast_LED
         leds[0] = CRGB::Green;
@@ -295,7 +295,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       preferences.putBool("sw3", false);
       char data[32];
       snprintf(data, sizeof(data), "%s,sw3:0", DEVICE_ID); 
-      client.publish(mqtt_pub_topic, data);
+      client.publish(mqtt_ack_topic, data);
 
       #ifdef USE_Fast_LED
         leds[0] = CRGB::DeepPink;
@@ -313,7 +313,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       preferences.putBool("sw4", true);
       char data[32];
       snprintf(data, sizeof(data), "%s,sw4:1", DEVICE_ID); 
-      client.publish(mqtt_pub_topic, data);
+      client.publish(mqtt_ack_topic, data);
 
       #ifdef USE_Fast_LED
         leds[0] = CRGB::Green;
@@ -330,7 +330,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       preferences.putBool("sw4", false);
       char data[32];
       snprintf(data, sizeof(data), "%s,sw4:0", DEVICE_ID); 
-      client.publish(mqtt_pub_topic, data);
+      client.publish(mqtt_ack_topic, data);
 
       #ifdef USE_Fast_LED
         leds[0] = CRGB::DeepPink;
@@ -357,7 +357,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
       char data[32];
       snprintf(data, sizeof(data), "%s,sw1234:1", DEVICE_ID); 
-      client.publish(mqtt_pub_topic, data);
+      client.publish(mqtt_ack_topic, data);
 
       #ifdef USE_Fast_LED
         leds[0] = CRGB::Green;
@@ -382,7 +382,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
       char data[32];
       snprintf(data, sizeof(data), "%s,sw1234:0", DEVICE_ID); 
-      client.publish(mqtt_pub_topic, data);
+      client.publish(mqtt_ack_topic, data);
 
       #ifdef USE_Fast_LED
         leds[0] = CRGB::DeepPink;
@@ -503,7 +503,7 @@ void wifiResetTask(void *param) {
     wm.setConfigPortalTimeout(180);  // timeout in seconds
 
     // Start autoConnect with timeout
-    if (!wm.autoConnect("DMA_SmartSwitch_Config")) {
+    if (!wm.autoConnect("SmartSwitch_Config")) {
       DEBUG_PRINTLN("WiFi config portal timed out!");
       // Handle fallback, e.g., restart or continue offline
       ESP.restart();

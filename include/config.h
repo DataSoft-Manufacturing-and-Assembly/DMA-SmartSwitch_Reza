@@ -1,3 +1,6 @@
+#include <credentials.h>
+//=============================================================//
+
 #define DEBUG_MODE true
 // #define USE_RF_RECEIVER
 #define USE_Fast_LED
@@ -7,8 +10,8 @@
 #define WIFI_RESET_BUTTON_PIN 0
 //=============================================================//
 
-#define FIRMWARE_VERSION "WiFi-2.11.0"
-#define FIRMWARE_RELEASE_DATE "27-Nov-2025"
+#define FIRMWARE_VERSION "WiFi-PU-2.12.0"
+#define FIRMWARE_RELEASE_DATE "08-Dec-2025"
 //=============================================================//
 
 // Include necessary libraries
@@ -36,10 +39,10 @@
 #define CHANGE_DEICE_ID 0
 
 #if CHANGE_DEICE_ID
-    #define WORK_PACKAGE "1225"
-    #define GW_TYPE "10"
-    #define FIRMWARE_UPDATE_DATE "251015" 
-    #define DEVICE_SERIAL "0088"
+    #define WORK_PACKAGE "9999"
+    #define GW_TYPE "11"
+    #define FIRMWARE_UPDATE_DATE "251208" 
+    #define DEVICE_SERIAL "0001"
     //#define DEVICE_ID WORK_PACKAGE GW_TYPE FIRMWARE_UPDATE_DATE DEVICE_SERIAL
 #endif
 
@@ -72,17 +75,6 @@ int wifiAttemptCount = WIFI_ATTEMPT_COUNT;
 int wifiWaitCount = WIFI_WAIT_COUNT;
 int maxWifiAttempts = MAX_WIFI_ATTEMPTS;
 int mqttAttemptCount = MQTT_ATTEMPT_COUNT;
-//=============================================================//
-
-const char* mqtt_server = "broker2.dma-bd.com";
-const char* mqtt_user = "broker2";
-const char* mqtt_password = "Secret!@#$1234";
-const char* mqtt_hb_topic = "DMA/SmartSwitch/HB";
-const char* mqtt_pub_topic = "DMA/SmartSwitch/PUB";
-const char* mqtt_sub_topic = "DMA/SmartSwitch/SUB";
-const char* mqtt_ack_topic = "DMA/SmartSwitch/ACK";
-const char* mqtt_ota_topic = "DMA/SmartSwitch/OTA";
-const char* ota_url = "https://raw.githubusercontent.com/DataSoft-Manufacturing-and-Assembly/DMA-SmartSwitch_Reza/main/ota/firmware.bin";
 //=============================================================//
 
 // FastLED Configuration
