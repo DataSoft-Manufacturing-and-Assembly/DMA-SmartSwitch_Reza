@@ -42,7 +42,7 @@
     #define WORK_PACKAGE "9999"
     #define GW_TYPE "11"
     #define FIRMWARE_UPDATE_DATE "251208" 
-    #define DEVICE_SERIAL "0002"
+    #define DEVICE_SERIAL "0003"
 #endif
 
 const char* DEVICE_ID;

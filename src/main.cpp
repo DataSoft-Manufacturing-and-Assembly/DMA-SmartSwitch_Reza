@@ -9,6 +9,7 @@ void reconnectWiFi();
 void reconnectMQTT();
 void mqttCallback(char* topic, byte* payload, unsigned int length);
 void publishHeartbeat();
+void publishSwitchStatus();
 void WifiResetHandle();
 void RFReceiverHandle();
 //==================================================================//
@@ -33,6 +34,26 @@ void publishHeartbeat() {
   }
 }
 //========================================//
+
+void publishSwitchStatus() {
+  if (client.connected()) {
+    char status_data[100];
+    snprintf(status_data, sizeof(status_data), "%s,sw1:%d,sw2:%d,sw3:%d,sw4:%d", DEVICE_ID,
+      digitalRead(SW_PIN1), digitalRead(SW_PIN2), digitalRead(SW_PIN3), digitalRead(SW_PIN4));
+    client.publish(mqtt_pub_topic, status_data);
+    DEBUG_PRINTLN("Switch status sent Successfully");
+
+    #ifdef USE_Fast_LED
+      leds[0] = CRGB::Blue;
+      FastLED.show();
+      vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
+      leds[0] = CRGB::Black;
+      FastLED.show();
+    #endif
+  } else {
+    DEBUG_PRINTLN("Failed to publish switch status on MQTT");
+  }
+}
 
 //WiFi Reset Handler
 void WifiResetHandle() {
@@ -416,6 +437,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     DEBUG_PRINTLN(pingData);
   }
   //=================================================================//
+
+  if(message == "get_status") {
+    DEBUG_PRINTLN("Request for switch status");
+    publishSwitchStatus(); // Call the function to publish switch status
+  }
+
+  if(message == "get_hb") {
+    DEBUG_PRINTLN("Request for heartbeat");
+    publishHeartbeat(); // Call the function to publish heartbeat
+  }
 
   // Handle Restart Command
   if(message == "restart") {
