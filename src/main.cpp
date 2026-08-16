@@ -1,17 +1,53 @@
 #include <config.h>
 
+typedef enum
+{
+  MODE_NORMAL,
+  MODE_CALIBRATION
+} scaleMode_t;
+
+scaleMode_t currentMode;
+
+typedef struct
+{
+  float weight;
+  long raw;
+} scaleData_t;
+
+scaleData_t scaleData;
+SemaphoreHandle_t scaleMutex;
+
+// -------------------- Filter Settings --------------------
+#define FILTER_SAMPLES 5
+#define ZERO_DEADZONE 2.0     // grams
+#define PRINT_THRESHOLD 5.0   // grams change required to print
+
+float readFilteredWeight()
+{
+  float sum = 0;
+
+  for (int i = 0; i < FILTER_SAMPLES; i++)
+  {
+    sum += scale.get_units(1);
+  }
+
+  return sum / FILTER_SAMPLES;
+}
+
+
 //Function Prototypes
 void otaTask(void *param);
 void wifiResetTask(void *param);
 void networkTask(void *param);
-void mainTask(void *param);
 void reconnectWiFi();
 void reconnectMQTT();
 void mqttCallback(char* topic, byte* payload, unsigned int length);
 void publishHeartbeat();
-void publishSwitchStatus();
 void WifiResetHandle();
-void RFReceiverHandle();
+
+
+void mainTask(void *param);
+void serialTask(void *param);
 //==================================================================//
 
 //Publish Heartbeat
@@ -34,26 +70,6 @@ void publishHeartbeat() {
   }
 }
 //========================================//
-
-void publishSwitchStatus() {
-  if (client.connected()) {
-    char status_data[100];
-    snprintf(status_data, sizeof(status_data), "%s,sw1:%d,sw2:%d,sw3:%d,sw4:%d", DEVICE_ID,
-      digitalRead(SW_PIN1), digitalRead(SW_PIN2), digitalRead(SW_PIN3), digitalRead(SW_PIN4));
-    client.publish(mqtt_pub_topic, status_data);
-    DEBUG_PRINTLN("Switch status sent Successfully");
-
-    #ifdef USE_Fast_LED
-      leds[0] = CRGB::Blue;
-      FastLED.show();
-      vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
-      leds[0] = CRGB::Black;
-      FastLED.show();
-    #endif
-  } else {
-    DEBUG_PRINTLN("Failed to publish switch status on MQTT");
-  }
-}
 
 //WiFi Reset Handler
 void WifiResetHandle() {
@@ -83,47 +99,6 @@ void WifiResetHandle() {
     FastLED.show();
   #endif
 }
-//========================================//
-
-//RF Receiver Handler
-#ifdef USE_RF_RECEIVER
-  void RFReceiverHandle() {
-    unsigned long receivedCode = mySwitch.getReceivedValue();
-    int bitLength = mySwitch.getReceivedBitlength(); // Get bit length of the received signal
-
-    // **Ignore signals that do not match the expected bit length (e.g., < 24 bits)**
-    if (bitLength < 24) {  
-      DEBUG_PRINTLN(String("Ignored RF Signal: ") + String(receivedCode) + " (Bits: " + String(bitLength) + ")");
-      mySwitch.resetAvailable();
-      continue;;
-    }
-
-    // **Short-Term Global Debounce (Ignore if received within 100ms)**
-    if (now - lastRFGlobalReceivedTime < 100) {
-      mySwitch.resetAvailable();
-      continue;
-    }
-
-    // **Per-Sensor Debounce (Ignore same sensor within 2 sec)**
-    if (lastRFReceivedTimeMap.find(receivedCode) == lastRFReceivedTimeMap.end() || 
-        (now - lastRFReceivedTimeMap[receivedCode] > 2000)) {  
-
-      lastRFReceivedTimeMap[receivedCode] = now;  // Update per-sensor time
-      lastRFGlobalReceivedTime = now;  // Update global debounce
-
-      // **Debug Output**
-      DEBUG_PRINTLN(String("Valid RF Received: ") + String(receivedCode) + " (Bits: " + String(bitLength) + ")");
-      
-      // **Send Data to MQTT**
-      char data[50];
-      snprintf(data, sizeof(data), "%s,%lu", DEVICE_ID, receivedCode);
-      client.publish(mqtt_pub_topic, data);
-      DEBUG_PRINTLN(String("Data Sent to MQTT: ") + String(data));
-    }
-
-    mySwitch.resetAvailable();
-  }
-#endif
 //========================================//
 
 // Function to reconnect to WiFi
@@ -221,201 +196,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   DEBUG_PRINTLN("Message arrived on topic: " + String(topic));
   DEBUG_PRINTLN("Message content: " + message);
 
-  preferences.begin("switches", false);  // Open Preferences storage
-
-  if (message == "sw1:1") {
-    DEBUG_PRINTLN("Switch-1: On");
-    digitalWrite(SW_PIN1, HIGH);
-    preferences.putBool("sw1", true);  // Save state
-    char data[32];
-    snprintf(data, sizeof(data), "%s,sw1:1", DEVICE_ID); 
-    client.publish(mqtt_ack_topic, data);
-
-    #ifdef USE_Fast_LED
-      leds[0] = CRGB::Green;
-      FastLED.show();
-      vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
-      leds[0] = CRGB::Black;
-      FastLED.show();
-    #endif
-    DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data))
-  } 
-  else if (message == "sw1:0") {
-      DEBUG_PRINTLN("Switch-1: Off");
-      digitalWrite(SW_PIN1, LOW);
-      preferences.putBool("sw1", false); 
-      char data[32];
-      snprintf(data, sizeof(data), "%s,sw1:0", DEVICE_ID); 
-      client.publish(mqtt_ack_topic, data);
-
-      #ifdef USE_Fast_LED
-        leds[0] = CRGB::DeepPink;
-        FastLED.show();
-        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
-        leds[0] = CRGB::Black;
-        FastLED.show();
-      #endif
-      DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
-  }
-
-  if (message == "sw2:1") {
-      DEBUG_PRINTLN("Switch-2: On");
-      digitalWrite(SW_PIN2, HIGH);
-      preferences.putBool("sw2", true);
-      char data[32];
-      snprintf(data, sizeof(data), "%s,sw2:1", DEVICE_ID); 
-      client.publish(mqtt_ack_topic, data);
-
-      #ifdef USE_Fast_LED
-        leds[0] = CRGB::Green;
-        FastLED.show();
-        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
-        leds[0] = CRGB::Black;
-        FastLED.show();
-      #endif
-      DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
-  } 
-  else if (message == "sw2:0") {
-      DEBUG_PRINTLN("Switch-2: Off");
-      digitalWrite(SW_PIN2, LOW);
-      preferences.putBool("sw2", false);
-      char data[32];
-      snprintf(data, sizeof(data), "%s,sw2:0", DEVICE_ID); 
-      client.publish(mqtt_ack_topic, data);
-
-      #ifdef USE_Fast_LED
-        leds[0] = CRGB::DeepPink;
-        FastLED.show();
-        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
-        leds[0] = CRGB::Black;
-        FastLED.show();
-      #endif
-      DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
-  }
-
-  if (message == "sw3:1") {
-      DEBUG_PRINTLN("Switch-3: On");
-      digitalWrite(SW_PIN3, HIGH);
-      preferences.putBool("sw3", true);
-      char data[32];
-      snprintf(data, sizeof(data), "%s,sw3:1", DEVICE_ID); 
-      client.publish(mqtt_ack_topic, data);
-
-      #ifdef USE_Fast_LED
-        leds[0] = CRGB::Green;
-        FastLED.show();
-        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
-        leds[0] = CRGB::Black;
-        FastLED.show();
-      #endif
-      DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
-  } 
-  else if (message == "sw3:0") {
-      DEBUG_PRINTLN("Switch-3: Off");
-      digitalWrite(SW_PIN3, LOW);
-      preferences.putBool("sw3", false);
-      char data[32];
-      snprintf(data, sizeof(data), "%s,sw3:0", DEVICE_ID); 
-      client.publish(mqtt_ack_topic, data);
-
-      #ifdef USE_Fast_LED
-        leds[0] = CRGB::DeepPink;
-        FastLED.show();
-        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
-        leds[0] = CRGB::Black;
-        FastLED.show();
-      #endif
-      DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
-  }
-
-  if (message == "sw4:1") {
-      DEBUG_PRINTLN("Switch-4: On");
-      digitalWrite(SW_PIN4, HIGH);
-      preferences.putBool("sw4", true);
-      char data[32];
-      snprintf(data, sizeof(data), "%s,sw4:1", DEVICE_ID); 
-      client.publish(mqtt_ack_topic, data);
-
-      #ifdef USE_Fast_LED
-        leds[0] = CRGB::Green;
-        FastLED.show();
-        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
-        leds[0] = CRGB::Black;
-        FastLED.show();
-      #endif
-      DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
-  } 
-  else if (message == "sw4:0") {
-      DEBUG_PRINTLN("Switch-4: Off");
-      digitalWrite(SW_PIN4, LOW);
-      preferences.putBool("sw4", false);
-      char data[32];
-      snprintf(data, sizeof(data), "%s,sw4:0", DEVICE_ID); 
-      client.publish(mqtt_ack_topic, data);
-
-      #ifdef USE_Fast_LED
-        leds[0] = CRGB::DeepPink;
-        FastLED.show();
-        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
-        leds[0] = CRGB::Black;
-        FastLED.show();
-      #endif
-      DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
-  }
-
-  //Handle All Switches Together
-  if (message == "sw1234:1") {
-      DEBUG_PRINTLN("Switch-1234: On");
-      digitalWrite(SW_PIN1, HIGH);
-      digitalWrite(SW_PIN2, HIGH);
-      digitalWrite(SW_PIN3, HIGH);
-      digitalWrite(SW_PIN4, HIGH);
-
-      preferences.putBool("sw1", true);
-      preferences.putBool("sw2", true);
-      preferences.putBool("sw3", true);
-      preferences.putBool("sw4", true);
-
-      char data[32];
-      snprintf(data, sizeof(data), "%s,sw1234:1", DEVICE_ID); 
-      client.publish(mqtt_ack_topic, data);
-
-      #ifdef USE_Fast_LED
-        leds[0] = CRGB::Green;
-        FastLED.show();
-        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
-        leds[0] = CRGB::Black;
-        FastLED.show();
-      #endif
-      DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
-  } 
-  else if (message == "sw1234:0") {
-      DEBUG_PRINTLN("Switch-1234: Off");
-      digitalWrite(SW_PIN1, LOW);
-      digitalWrite(SW_PIN2, LOW);
-      digitalWrite(SW_PIN3, LOW);
-      digitalWrite(SW_PIN4, LOW);
-
-      preferences.putBool("sw1", false);
-      preferences.putBool("sw2", false);
-      preferences.putBool("sw3", false);
-      preferences.putBool("sw4", false);
-
-      char data[32];
-      snprintf(data, sizeof(data), "%s,sw1234:0", DEVICE_ID); 
-      client.publish(mqtt_ack_topic, data);
-
-      #ifdef USE_Fast_LED
-        leds[0] = CRGB::DeepPink;
-        FastLED.show();
-        vTaskDelay(pdMS_TO_TICKS(500)); // Short delay to indicate status
-        leds[0] = CRGB::Black;
-        FastLED.show();
-      #endif
-      DEBUG_PRINTLN(String("Switch Status Sent to MQTT: ") + String(data));
-  }
-  preferences.end();  // Close Preferences storage
-  
   // Handle Ping Command
   if (message == "ping") {
     DEBUG_PRINTLN("Request for ping");
@@ -437,11 +217,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     DEBUG_PRINTLN(pingData);
   }
   //=================================================================//
-
-  if(message == "get_status") {
-    DEBUG_PRINTLN("Request for switch status");
-    publishSwitchStatus(); // Call the function to publish switch status
-  }
 
   if(message == "get_hb") {
     DEBUG_PRINTLN("Request for heartbeat");
@@ -487,6 +262,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 // Start Network Task
 void networkTask(void *param) {
+  DEBUG_PRINTLN("Network Task started...!");
   WiFi.mode(WIFI_STA);
   WiFi.begin();
 
@@ -534,7 +310,7 @@ void wifiResetTask(void *param) {
     wm.setConfigPortalTimeout(180);  // timeout in seconds
 
     // Start autoConnect with timeout
-    if (!wm.autoConnect("SmartSwitch_Config")) {
+    if (!wm.autoConnect("Weight_Scale_Config")) {
       DEBUG_PRINTLN("WiFi config portal timed out!");
       // Handle fallback, e.g., restart or continue offline
       ESP.restart();
@@ -556,6 +332,7 @@ void wifiResetTask(void *param) {
 // Start OTA Task
 void otaTask(void *parameter) {
   esp_task_wdt_reset();
+  Serial.println("OTA Task started...");
   Serial.println("Starting OTA update...");
 
   #ifdef USE_Fast_LED
@@ -621,11 +398,13 @@ void otaTask(void *parameter) {
 
 // Start Main Task
 void mainTask(void *param) {
+  DEBUG_PRINTLN("Main Task started...!");
   unsigned long lastReceivedTime = 0;  
   unsigned long lastReceivedCode = 0;
 
   for (;;) {
     esp_task_wdt_reset();
+      
     static unsigned long last_hb_send_time = 0;
     unsigned long now = millis();
     
@@ -633,36 +412,137 @@ void mainTask(void *param) {
     if (now - last_hb_send_time >= HB_INTERVAL) {
       last_hb_send_time = now;
       //---------------------------------------------//
-
       publishHeartbeat();
-
       //---------------------------------------------//
     }
-
     if (digitalRead(WIFI_RESET_BUTTON_PIN) == LOW) {
       //---------------------------------------------//
-      
       WifiResetHandle();
-
       //---------------------------------------------//
     }
-    
-    // **RF Signal Handling with Debounce and Bit Length Check**
-    #ifdef USE_RF_RECEIVER
-    if (mySwitch.available()) {
-      //---------------------------------------------//
-      
-      RFReceiverHandle();
-      
-      //---------------------------------------------//
-    }
-    #endif
+    //===============================================//
     
     //----------------------------------------------------------//
     vTaskDelay(pdMS_TO_TICKS(100)); // Keep FreeRTOS responsive
   }
 }
 
+//==================================================================//
+
+//-----------------------------------------------------------
+// Scale Task (Sensor + Filtering)
+//-----------------------------------------------------------
+void scaleTask(void *param)
+{
+  Serial.println("Scale Task Started");
+
+  scale.power_down();
+  vTaskDelay(pdMS_TO_TICKS(500));
+  scale.power_up();
+
+  if (currentMode == MODE_CALIBRATION)
+  {
+    Serial.println("Calibration Mode");
+    Serial.println("Clear the scale. Taring in 5 seconds...");
+
+    vTaskDelay(pdMS_TO_TICKS(5000));
+
+    scale.set_scale();
+    scale.tare();
+
+    Serial.println("Tare complete. Place known weight.");
+  }
+  else
+  {
+    Serial.println("Normal Mode");
+
+    scale.set_scale(55.0325f);   // Your calibration factor
+    scale.tare();
+  }
+
+  for (;;)
+  {
+    if (scale.is_ready())
+    {
+      float weight = readFilteredWeight();
+      long raw = scale.get_value(1);
+
+      // Zero dead-zone
+      if (abs(weight) < ZERO_DEADZONE)
+        weight = 0;
+
+      xSemaphoreTake(scaleMutex, portMAX_DELAY);
+
+      scaleData.weight = weight;
+      scaleData.raw = raw;
+
+      xSemaphoreGive(scaleMutex);
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(100));
+  }
+}
+
+//-----------------------------------------------------------
+// Serial Task
+//-----------------------------------------------------------
+void serialTask(void *param)
+{
+  Serial.println("Serial Task Started");
+
+  float lastWeight = 0;
+  float printedWeight = -9999;
+
+  uint32_t stableStart = 0;
+  bool stable = false;
+
+  const float CHANGE_THRESHOLD = 5.0;   // grams
+  const uint32_t STABLE_TIME = 1000;    // ms
+
+  for (;;)
+  {
+    float weight;
+
+    xSemaphoreTake(scaleMutex, portMAX_DELAY);
+    weight = scaleData.weight;
+    xSemaphoreGive(scaleMutex);
+
+    if (currentMode == MODE_CALIBRATION)
+    {
+      Serial.print("Raw Value: ");
+      Serial.println(scaleData.raw);
+      vTaskDelay(pdMS_TO_TICKS(2000));
+      continue;
+    }
+
+    // Detect weight change
+    if (abs(weight - lastWeight) > CHANGE_THRESHOLD)
+    {
+      stableStart = millis();
+      stable = false;
+    }
+
+    // Check if stable
+    if (!stable && (millis() - stableStart > STABLE_TIME))
+    {
+      stable = true;
+    }
+
+    // Print only once when stable
+    if (stable && abs(weight - printedWeight) > CHANGE_THRESHOLD)
+    {
+      Serial.print("Weight: ");
+      Serial.print(weight, 2);
+      Serial.println(" g");
+
+      printedWeight = weight;
+    }
+
+    lastWeight = weight;
+
+    vTaskDelay(pdMS_TO_TICKS(100));
+  }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -699,30 +579,29 @@ void setup() {
     leds[0] = CRGB::Black;
     FastLED.show();
   #endif
+  //===============================================//
+
+  pinMode(MODE_BUTTON_PIN, INPUT_PULLUP);
+
+  if (digitalRead(MODE_BUTTON_PIN) == LOW)
+  {
+    currentMode = MODE_CALIBRATION;
+    Serial.println("Calibration Mode Activated");
+  }
+  else
+  {
+    currentMode = MODE_NORMAL;
+    Serial.println("Normal Mode Activated");
+  }
+
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+
+  scaleMutex = xSemaphoreCreateMutex();
+
+    
+  //===============================================//
 
   pinMode(WIFI_RESET_BUTTON_PIN, INPUT_PULLUP);
-
-  // mySwitch.enableReceive(digitalPinToInterrupt(RF_PIN));
-
-  pinMode(SW_PIN1, OUTPUT);
-  pinMode(SW_PIN2, OUTPUT);
-  pinMode(SW_PIN3, OUTPUT);
-  pinMode(SW_PIN4, OUTPUT);
-
-  digitalWrite(SW_PIN1, LOW);
-  digitalWrite(SW_PIN2, LOW);
-  digitalWrite(SW_PIN3, LOW);
-  digitalWrite(SW_PIN4, LOW);
-
-  preferences.begin("switches", false);  // Open Preferences
-
-  digitalWrite(SW_PIN1, preferences.getBool("sw1", false)); // Default: OFF
-  digitalWrite(SW_PIN2, preferences.getBool("sw2", false));
-  digitalWrite(SW_PIN3, preferences.getBool("sw3", false));
-  digitalWrite(SW_PIN4, preferences.getBool("sw4", false));
-
-  preferences.end();
-
   client.setServer(mqtt_server, 1883);
   client.setCallback(mqttCallback);
   client.setKeepAlive(60);
@@ -731,8 +610,20 @@ void setup() {
   esp_task_wdt_init(60, true);   // 🛡️ 60s timeout for all registered tasks 
   Serial.println("✅ WDT Initialized!");
 
-  xTaskCreatePinnedToCore(networkTask, "Network Task", 8*1024, NULL, 1, &networkTaskHandle, 0);
-  xTaskCreatePinnedToCore(mainTask, "Main Task", 16*1024, NULL, 1, &mainTaskHandle, 1);
+  // Start appropriate tasks based on mode
+  if(wifiMode){
+    xTaskCreatePinnedToCore(networkTask, "Network Task", 8*1024, NULL, 1, &networkTaskHandle, 0);
+    Serial.println("✅ Network Task Created!");
+
+    xTaskCreatePinnedToCore(mainTask, "Main Task", 16*1024, NULL, 1, &mainTaskHandle, 1);
+    Serial.println("✅ Main Task Created!");
+  }
+  else{
+    // xTaskCreatePinnedToCore(serialTask, "Serial Task", 16*1024, NULL, 1, &serialTaskHandle, 1);
+    // Serial.println("✅ Serial Task Created!");
+    xTaskCreatePinnedToCore(scaleTask, "ScaleTask", 4096, NULL, 3, NULL, 1);
+    xTaskCreatePinnedToCore(serialTask, "SerialTask", 4096, NULL, 1, NULL, 1);
+  }
   // xTaskCreatePinnedToCore(wifiResetTask, "WiFi Reset Task", 8*1024, NULL, 1, &wifiResetTaskHandle, 1);
 }
 

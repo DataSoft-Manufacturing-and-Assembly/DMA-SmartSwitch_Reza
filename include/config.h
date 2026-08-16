@@ -1,17 +1,25 @@
 #include <credentials.h>
 //=============================================================//
 
+bool wifiMode = false; // false for normal mode, true for calibration mode
+
 #define DEBUG_MODE true
-// #define USE_RF_RECEIVER
 #define USE_Fast_LED
+
+#if defined(USE_Fast_LED)
+    #include <FastLED.h>
+#endif
+
 #define HB_INTERVAL 5*60*1000
 // #define DATA_INTERVAL 15*1000
-#define CONFIG_TASK_WDT_DEBUG 1
 #define WIFI_RESET_BUTTON_PIN 0
+
+
+#define CONFIG_TASK_WDT_DEBUG 1
 //=============================================================//
 
-#define FIRMWARE_VERSION "WiFi-PU-2.12.0"
-#define FIRMWARE_RELEASE_DATE "08-Dec-2025"
+#define FIRMWARE_VERSION "WiFi-1.1.0"
+#define FIRMWARE_RELEASE_DATE "08-Mar-2026"
 //=============================================================//
 
 // Include necessary libraries
@@ -19,41 +27,25 @@
 #include <WiFi.h>
 #include <WiFiManager.h>  // WiFiManager library
 #include <PubSubClient.h>
-#include <FastLED.h>
 #include <HTTPClient.h>
+#include <FastLED.h>
 #include <esp_task_wdt.h>
 #include <Preferences.h>
-
-#ifdef USE_RF_RECEIVER
-    #include <RCSwitch.h>
-    RCSwitch mySwitch = RCSwitch();
-
-    #include <map>
-    std::map<unsigned long, unsigned long> lastRFReceivedTimeMap;
-    unsigned long lastRFGlobalReceivedTime = 0;  // Global debounce
-
-    #define RF_PIN 15  
-#endif
+#include <HX711.h>
 
 //Device ID Configuration
 #define CHANGE_DEICE_ID 0
 
 #if CHANGE_DEICE_ID
-    #define WORK_PACKAGE "9999"
-    #define GW_TYPE "11"
-    #define FIRMWARE_UPDATE_DATE "251208" 
-    #define DEVICE_SERIAL "0003"
+    #define WORK_PACKAGE "1285"
+    #define GW_TYPE "01"
+    #define FIRMWARE_UPDATE_DATE "260308" 
+    #define DEVICE_SERIAL "0000"
 #endif
 
 const char* DEVICE_ID;
 //=============================================================//
 
-// Switch Pin Definitions
-#define SW_PIN1 25  
-#define SW_PIN2 26  
-#define SW_PIN3 27 
-#define SW_PIN4 14
-//=============================================================//
 
 // Serial Print Section
 #define DEBUG_PRINT(x)  if (DEBUG_MODE) { Serial.print(x); }
@@ -86,15 +78,26 @@ int mqttAttemptCount = MQTT_ATTEMPT_COUNT;
 
 //Making Instances
 Preferences preferences;
-
 WiFiManager wm;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
 TaskHandle_t networkTaskHandle;
-TaskHandle_t mainTaskHandle;
 TaskHandle_t wifiResetTaskHandle = NULL;
 TaskHandle_t otaTaskHandle = NULL;
 
 bool wifiResetFlag = false;
+
+TaskHandle_t mainTaskHandle;
+TaskHandle_t serialTaskHandle;
+TaskHandle_t scaleTaskHandle;
+
 //=============================================================//
+
+// HX711 Configuration
+const int LOADCELL_DOUT_PIN = 16;
+const int LOADCELL_SCK_PIN = 17;
+const int MODE_BUTTON_PIN = 0;
+
+HX711 scale;
+bool isCalibrationMode = false;

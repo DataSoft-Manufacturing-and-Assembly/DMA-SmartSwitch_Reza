@@ -1,3 +1,4 @@
 knolleary/PubSubClient@^2.8
-tzapu/WiFiManager@^2.0.17
+bogde/HX711 @ ^0.7.5
 fastled/FastLED@^3.9.3
+tzapu/WiFiManager@^2.0.17
