@@ -1,4 +1,62 @@
-FastLED 3.9.13 (Upcoming Release)
+FastLED 3.9.16
+==============
+* New inoise16 $D function taking in x,y,z,t
+  * This is good for 3D oriented noise functions + time factor.
+  * Wrap an led strip as a cylinder and use this function to map noise to it.
+* New Wave Simulator in 1D and 2D
+  * Thanks [/u/ssilverman](https://github.com/ssilverman)
+  * Full and half duplex wave simulators (half duplix supports black)
+  * For improved rendering we allow 2x, 4x, 8x super sampling
+  * Speed control via multiplying the rendering iterations per frame.
+* `EVERY_N_MILLISECONDS_RANDOM(MIN, MAX)` macro for sketches.
+* `CRGB CRGB::blendAlphaMaxChannel(const CRGB& upper, const CRGB& lower)` for fx blending without `alpha`.
+* [fl/2dfx/blend.h](https://github.com/FastLED/FastLED/blob/master/src/fx/2d/blend.h)
+  * Visualizer blend stack.
+  * Multiple visualizers can be stacked and then composited via `blendAlphaMaxChannel(...)`
+  * Blur2d can be applied per layer and globally.
+* `fl/time_alpha.h`
+  * New time based functions for controlling animations.
+  * Give it a beginning time, and end time and the current time
+    * `update(...)` will give you the current time progression.
+  * Trigger then called upated to get `uint8_t` from 0 -> 255 representing current animation progression.
+* New Examples:
+  * FxWave2d
+    * Complex multi wave simulator visualizer.
+  * FireMatrix
+  * FireCylinder
+    * Same as FireMatrix, but the visualizer wraps around so it is seemless (y(0) ~= y(width -1))
+
+
+FastLED 3.9.15
+==============
+* ESP32 series now supports FORCE_FASTLED_NAMESPACE=1
+* Giga R1 Support improvement
+  * Better support for building in Arduino
+* Seeed XIAO nRF52840
+  * Pins 0-15 are now defined correctly (provided by community)
+* ESP32-S3 I2S Driver
+  * Arbitrary pins are now supported
+    * https://github.com/FastLED/FastLED/pull/1913
+* AVR
+  * some boards like due should be fixed due to redefinition of `new`
+    * https://github.com/FastLED/FastLED/pull/1910
+  * fixed jumping-red-pixel bug in asm re-order by avr compiler
+    * https://github.com/FastLED/FastLED/commit/0195b34380da0c5234bda38d73a018ea0b7569d5
+* New Example - Fire2023
+  * https://github.com/FastLED/FastLED/blob/master/examples/Fire2023/Fire2023.ino
+  * Uses multiple perlin noise function to generate an improved fire effect
+
+
+FastLED 3.9.14
+==============
+* Attiny4343 now works
+  * https://github.com/FastLED/FastLED/pull/1874
+  * Thanks https://github.com/sutaburosu!
+* Arduino GIGA Now working
+  * Thank you [@RubixCubix!](https://github.com/RubiCubix)
+* Fix for mqtt build modes: https://github.com/FastLED/FastLED/issues/1884
+
+FastLED 3.9.13
 ==============
 * HD107(s) and HD mode are now availabe in FastLED.
   * See example HD107.ino

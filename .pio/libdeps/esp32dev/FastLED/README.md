@@ -12,7 +12,11 @@ FastLED Library
 
 Want to control a strip of leds? Or control 10's of thousands? FastLED has your back.
 
-FastLED is a robust and massively parallel-led driver for Arduino, Esp32, RaspberryPi,  Atmega, Teensy, Uno, Apollo3 Arm and more. Also runs on dirt cheap sub $1 devices, due to it's incredibly small compile size. High end devices can drive upto ~30k LEDS (Teensy) and ~20k on ESP32. Supports nearly every single LED chipset in existence. Background rendering (ESP32/Teensy/RaspberriPi) means you can respond to user input while the leds render. FastLED is the fourth [most popular library on Arduino](https://docs.arduino.cc/libraries/).
+FastLED is a robust and massively parallel-led driver for Arduino, Esp32, RaspberryPi,  Atmega, Teensy, Uno, Apollo3 Arm and more. Also runs on dirt cheap sub $1 devices, due to it's incredibly small compile size. High end devices can drive upto ~30k LEDS (Teensy) and ~20k on ESP32. Supports nearly every single LED chipset in existence. Background rendering (ESP32/Teensy/RaspberriPi) means you can respond to user input while the leds render. FastLED is the third [most popular library on Arduino](https://docs.arduino.cc/libraries/).
+
+## Documentation
+
+Can be found [here](https://fastled.io/docs/files.html)
 
 ## Star History
 
@@ -24,7 +28,6 @@ FastLED is a robust and massively parallel-led driver for Arduino, Esp32, Raspbe
  </picture>
 </a>
 
-*Hey everyone, Zach here. If you use or like this library then give us a star. I'm trying to make FastLED the #2 most popular library for Arduino. It's just one click, and you'll benefit from continued updates to FastLED.*
 
 ## About
 
@@ -62,20 +65,61 @@ void loop() {
 }
 ```
 
-For more examples see this [link](examples). Web compiled [examples](https://zackees.github.io/fastled-wasm/).
+For more examples, see this [link](examples). Web compiled [examples](https://zackees.github.io/fastled-wasm/).
 
 
+# New Feature Announcements
+
+
+## New in 3.9.16: WaveFx / Multi Layer Compositing / Time-based animation control
+
+https://github.com/user-attachments/assets/156f77c6-9f95-4787-b296-70b882f399dd
+
+
+  * [FxWave2d](https://github.com/FastLED/FastLED/blob/master/examples/FxWave2d/FxWave2d.ino)
+    * [Wave Simulation Library](https://github.com/FastLED/FastLED/blob/master/src/fl/wave_simulation.h)
+  * [FireCylinder](https://github.com/FastLED/FastLED/blob/master/examples/FireCylinder/FireCylinder.ino)
+    * Wraps around so that (0,y) ~= (width-1,y)
+  * [TimeAlpha](https://github.com/FastLED/FastLED/blob/master/src/fl/time_alpha.h)
+    * Precision control of animations with time-based alpha transition.
+
+
+
+## New in 3.9.13: HD107 "Turbo" 40Mhz LED Support
+
+![image](https://github.com/user-attachments/assets/9684ab7d-2eaa-40df-a00d-0dff18098917)
+
+## New in 3.9.12: WS2816 "HD" LED support
+
+![image](https://github.com/user-attachments/assets/258ec44c-af82-44b7-ad7b-fac08daa9bcb)
+
+## New in 3.9.10: Super Stable WS2812 SPI driver for ESP32
+
+![image (2)](https://github.com/user-attachments/assets/b3c5801c-66df-40af-a6b8-bbd1520fbb36)
+
+## New in 3.9.9: 16-way Yves I2S parallel driver for the ESP32-S3
+
+![perpetualmaniac_an_led_display_in_a_room_lots_of_refaction_of_t_eb7c170a-7b2c-404a-b114-d33794b4954b](https://github.com/user-attachments/assets/982571fc-9b8d-4e58-93be-5bed76a0c53d)
+
+*Note some users find that newer versions of the ESP32 arduino core (3.10) don't work very well, but older versions do, see [issue 1903](https://github.com/FastLED/FastLED/issues/1903)
+
+## New in 3.9.8 - Massive Teensy 4.1 & 4.0 LED output
+![New Project](https://github.com/user-attachments/assets/79dc2801-5161-4d5a-90a2-0126403e215f)
+
+
+## New in 3.9.2 - Overclocking of WS2812
+![image](https://github.com/user-attachments/assets/be98fbe6-0ec7-492d-8ed1-b7eb6c627e86)
+Update: max overclock has been reported at +70%: https://www.reddit.com/r/FastLED/comments/1gkcb6m/fastled_FASTLED_OVERCLOCK_17/
+
+## New in 3.7.7 - RGBW LED Strip Support
+
+![image (1)](https://github.com/user-attachments/assets/d4892626-3dc6-4d6d-a740-49ddad495fa5)
 
 
 ## Supported Platforms
 ### Arduino
 
 [![uno](https://github.com/FastLED/FastLED/actions/workflows/build_uno.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_uno.yml)
-
-
-[![attiny13](https://github.com/FastLED/FastLED/actions/workflows/build_attiny13.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_attiny13.yml)
-*needs pin definitions for this board*
-
 
 [![attiny85](https://github.com/FastLED/FastLED/actions/workflows/build_attiny85.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_attiny85.yml)
 
@@ -88,7 +132,7 @@ For more examples see this [link](examples). Web compiled [examples](https://zac
 
 
 [![attiny4313](https://github.com/FastLED/FastLED/actions/workflows/build_attiny4313.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_attiny4313.yml)
-*needs pin definitions for this board*
+*New FastLED 3.9.14! - Very memory limited, so only tested against examples WS2812 Blink and APA102*
 
 
 [![yun](https://github.com/FastLED/FastLED/actions/workflows/build_yun.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_yun.yml)
@@ -96,6 +140,7 @@ For more examples see this [link](examples). Web compiled [examples](https://zac
 
 [![digix](https://github.com/FastLED/FastLED/actions/workflows/build_digix.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_digix.yml)
 
+[![due](https://github.com/FastLED/FastLED/actions/workflows/build_due.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_due.yml)
 
 [![uno_r4_wifi](https://github.com/FastLED/FastLED/actions/workflows/build_uno_r4_wifif.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_uno_r4_wifif.yml)
 
@@ -103,7 +148,7 @@ For more examples see this [link](examples). Web compiled [examples](https://zac
 [![nano_every](https://github.com/FastLED/FastLED/actions/workflows/build_nano_every.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_nano_every.yml)
 
 [![Arduino Giga-R1](https://github.com/FastLED/FastLED/actions/workflows/build_giga_r1.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_giga_r1.yml)
-*Multiple issues with this board. Pins aren't defined, F_CPU is not defined nor is it constant. And lots of other issues. Help wanted!*
+*Now works in 3.9.14!*
 
 
 ### Teensy
@@ -142,7 +187,7 @@ For more examples see this [link](examples). Web compiled [examples](https://zac
 
 [![apollo3_red](https://github.com/FastLED/FastLED/actions/workflows/build_apollo3_red.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_apollo3_red.yml) *Board needs pin definitions.*
 
-[![apollo3_thing_explorable](https://github.com/FastLED/FastLED/actions/workflows/build_apollo3_thing_explorable.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_apollo3_thing_explorable.yml) *Now Supported in the upcoming FastLED 3.9.12!*
+[![apollo3_thing_explorable](https://github.com/FastLED/FastLED/actions/workflows/build_apollo3_thing_explorable.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_apollo3_thing_explorable.yml)
 
 ### STM
 
@@ -193,6 +238,12 @@ For more examples see this [link](examples). Web compiled [examples](https://zac
 [![esp32_i2s_ws2812](https://github.com/FastLED/FastLED/actions/workflows/build_esp32_i2s_ws2812.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_esp32_i2s_ws2812.yml)
 
 [![esp32 extra libs](https://github.com/FastLED/FastLED/actions/workflows/build_esp_extra_libs.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_esp_extra_libs.yml)
+
+[![esp32dev_namespace](https://github.com/FastLED/FastLED/actions/workflows/build_esp32dev_namespace.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_esp32dev_namespace.yml)
+
+*Legacy Toolchains*
+
+[![esp32dev-idf3.3-lts](https://github.com/FastLED/FastLED/actions/workflows/build_esp32dev_idf3.3.yml/badge.svg)](https://github.com/FastLED/FastLED/actions/workflows/build_esp32dev_idf3.3.yml)
 
 Espressif's current evaluation of FastLED's compatibility with their product sheet can be found [here](https://github.com/espressif/arduino-esp32/blob/gh-pages/LIBRARIES_TEST.md)
 
@@ -258,6 +309,8 @@ I2S needs special setup as of 3.9.11 and earlier (current version of this writin
 
 The S3 is a CPU beast, but has half the RMT tx channels (4) and 2/3rds the I2S channels (16) of ESPDev. The S3 requires a special driver for I2S which you can find in this [example](https://github.com/FastLED/FastLED/blob/master/examples/Esp32S3I2SDemo/Esp32S3I2SDemo.ino)
 
+*Note some users find that newer versions of the ESP32 arduino core (3.10) don't work very well, but older versions do, see [issue 1903](https://github.com/FastLED/FastLED/issues/1903)
+
 ### RaspberriPi
 
 I (Zach Vorhies) don't use this platform. Help wanted on what the limits of this chip is.
@@ -269,29 +322,6 @@ If you are willing to make a custom board with shift registers, then the ESp32S3
 
   * Esp32DEV: https://github.com/hpwit/I2SClocklessVirtualLedDriver
   * Esp32-S3: https://github.com/hpwit/I2SClockLessLedVirtualDriveresp32s3
-
-# New Feature Announcements
-
-## New in 3.9.12: WS2816 "HD" LED support
-
-![image](https://github.com/user-attachments/assets/258ec44c-af82-44b7-ad7b-fac08daa9bcb)
-
-## New in 3.9.10: Super Stable WS2812 SPI driver for ESP32
-
-![image (2)](https://github.com/user-attachments/assets/b3c5801c-66df-40af-a6b8-bbd1520fbb36)
-
-## New in 3.9.9: 16-way Yves I2S parallel driver for the ESP32-S3
-
-![perpetualmaniac_an_led_display_in_a_room_lots_of_refaction_of_t_eb7c170a-7b2c-404a-b114-d33794b4954b](https://github.com/user-attachments/assets/982571fc-9b8d-4e58-93be-5bed76a0c53d)
-
-
-## New in 3.9.8 - Massive Teensy 4.1 & 4.0 LED output
-![New Project](https://github.com/user-attachments/assets/79dc2801-5161-4d5a-90a2-0126403e215f)
-
-
-## New in 3.9.2 - Overclocking of WS2812
-![image](https://github.com/user-attachments/assets/be98fbe6-0ec7-492d-8ed1-b7eb6c627e86)
-Update: max overclock has been reported at +70%: https://www.reddit.com/r/FastLED/comments/1gkcb6m/fastled_FASTLED_OVERCLOCK_17/
 
 
 ## Development
@@ -347,6 +377,7 @@ If you are looking for documentation on how something in the library works, plea
 
 If you run into bugs with the library, or if you'd like to request support for a particular platform or LED chipset, please submit an issue at http://fastled.io/issues.
 
+
 ## Supported LED Chipsets
 
 Here's a list of all the LED chipsets are supported.  More details on the LED chipsets are included [on our wiki page](https://github.com/FastLED/FastLED/wiki/Chipset-reference)
@@ -391,7 +422,7 @@ void setup() {
 
 Check out thr rust port of this algorithm:
 
-https://github.com/smart-leds-rs/apa102-spi-rs/pull/15
+https://docs.rs/apa102-spi/latest/apa102_spi/
 
 # Getting Started
 
@@ -442,6 +473,7 @@ Zach Vorhies, the current main contributor to FastLED, briefly worked with Dan i
 Zach has this to say about FastLED:
 
 *"The true power of FastLED lies in its ability to transform programmers into LED artists. Free space becomes their canvas; bending light is their medium. FastLED is a collective effort by programmers who want to manifest the world that science fiction writers promised us. -- To contribute code to FastLED is to leave behind a piece of something immortal."*
+
 
 ## Contributing
 

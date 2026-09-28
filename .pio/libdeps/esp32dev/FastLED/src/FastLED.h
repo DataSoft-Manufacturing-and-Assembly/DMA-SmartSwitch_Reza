@@ -16,13 +16,13 @@
 /// * 1 digit for the major version
 /// * 3 digits for the minor version
 /// * 3 digits for the patch version
-#define FASTLED_VERSION 3009013
+#define FASTLED_VERSION 3009016
 #ifndef FASTLED_INTERNAL
 #  ifdef  FASTLED_SHOW_VERSION
 #    ifdef FASTLED_HAS_PRAGMA_MESSAGE
-#      pragma message "FastLED version 3.009.013"
+#      pragma message "FastLED version 3.009.016"
 #    else
-#      warning FastLED version 3.009.013  (Not really a warning, just telling you here.)
+#      warning FastLED version 3.009.016  (Not really a warning, just telling you here.)
 #    endif
 #  endif
 #endif
@@ -846,11 +846,18 @@ FASTLED_NAMESPACE_END
 #ifdef FASTLED_UI
 // As a convenience, include the UI headers and bring them into the global namespace
 #include "fl/ui.h"
+#include "fl/xymap.h"
 using fl::UIButton;
 using fl::UICheckbox;
 using fl::UINumberField;
 using fl::UISlider;
+using fl::XYMap;
 #define FASTLED_TITLE(text) fl::UITitle g_title(text)
 #define FASTLED_DESCRIPTION(text) fl::UIDescription g_description(text)
 #endif // FASTLED_UI
+
+#if defined(FASTLED_FORCE_USE_NAMESPACE) && FASTLED_FORCE_USE_NAMESPACE==1
+using namespace fl;
+#endif
+
 

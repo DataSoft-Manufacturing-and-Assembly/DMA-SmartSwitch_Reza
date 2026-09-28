@@ -1,17 +1,17 @@
 
 #include <stdint.h>
-#include "scale_up.h"
 
 #define FASTLED_INTERNAL
 #include "FastLED.h"
-#include "bilinear_expansion.h"
+#include "fl/bilinear_expansion.h"
 #include "fl/ptr.h"
 #include "fx/fx2d.h"
 #include "lib8tion/random8.h"
 #include "noise.h"
 #include "fl/xymap.h"
 
-
+// Include here so that #define PI used in Arduino.h does not produce a warning.
+#include "scale_up.h"
 
 
 // Optimized for 2^n grid sizes in terms of both memory and performance.

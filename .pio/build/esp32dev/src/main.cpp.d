@@ -252,7 +252,7 @@
  .pio/libdeps/esp32dev/FastLED/src/fl/math_macros.h \
  .pio/libdeps/esp32dev/FastLED/src/pixel_controller.h \
  .pio/libdeps/esp32dev/FastLED/src/rgbw.h \
- .pio/libdeps/esp32dev/FastLED/src/five_bit_hd_gamma.h \
+ .pio/libdeps/esp32dev/FastLED/src/fl/five_bit_hd_gamma.h \
  .pio/libdeps/esp32dev/FastLED/src/dither_mode.h \
  .pio/libdeps/esp32dev/FastLED/src/pixel_iterator.h \
  .pio/libdeps/esp32dev/FastLED/src/cled_controller.h \
