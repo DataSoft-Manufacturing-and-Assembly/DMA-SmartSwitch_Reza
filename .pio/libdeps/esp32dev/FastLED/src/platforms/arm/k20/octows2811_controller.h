@@ -1,47 +1,51 @@
+// IWYU pragma: private
+
 #ifndef __INC_OCTOWS2811_CONTROLLER_H
 #define __INC_OCTOWS2811_CONTROLLER_H
 
 #ifdef USE_OCTOWS2811
 
-#include "OctoWS2811.h"
-#include "fl/namespace.h"
-
-FASTLED_NAMESPACE_BEGIN
-
-template<EOrder RGB_ORDER = GRB, uint8_t CHIP = WS2811_800kHz>
+// IWYU pragma: begin_keep
+#include <OctoWS2811.h>
+// IWYU pragma: end_keep
+#include "bitswap.h"
+#include "fl/stl/allocator.h"
+#include "fl/stl/noexcept.h"
+namespace fl {
+template<EOrder RGB_ORDER = GRB, u8 CHIP = WS2811_800kHz>
 class COctoWS2811Controller : public CPixelLEDController<RGB_ORDER, 8, 0xFF> {
   OctoWS2811  *pocto;
-  uint8_t *drawbuffer,*framebuffer;
+  u8 *drawbuffer,*framebuffer;
 
-  void _init(int nLeds) {
-    if(pocto == NULL) {
-      drawbuffer = (uint8_t*)malloc(nLeds * 8 * 3);
-      framebuffer = (uint8_t*)malloc(nLeds * 8 * 3);
+  void _init(int nLeds) FL_NOEXCEPT {
+    if(pocto == nullptr) {
+      drawbuffer = (u8*)fl::malloc(nLeds * 8 * 3);
+      framebuffer = (u8*)fl::malloc(nLeds * 8 * 3);
 
       // byte ordering is handled in show by the pixel controller
       int config = WS2811_RGB;
       config |= CHIP;
 
-      pocto = new OctoWS2811(nLeds, framebuffer, drawbuffer, config);
+      pocto = new OctoWS2811(nLeds, framebuffer, drawbuffer, config);  // ok bare allocation
 
       pocto->begin();
     }
   }
 public:
-  COctoWS2811Controller() { pocto = NULL; }
+  COctoWS2811Controller() { pocto = nullptr; }
   virtual int size() { return CLEDController::size() * 8; }
 
   virtual void init() { /* do nothing yet */ }
 
   typedef union {
-    uint8_t bytes[8];
-    uint32_t raw[2];
+    u8 bytes[8];
+    u32 raw[2];
   } Lines;
 
-  virtual void showPixels(PixelController<RGB_ORDER, 8, 0xFF> & pixels) {
+  virtual void showPixels(PixelController<RGB_ORDER, 8, 0xFF> & pixels) FL_NOEXCEPT {
     _init(pixels.size());
 
-    uint8_t *pData = drawbuffer;
+    u8 *pData = drawbuffer;
     while(pixels.has(1)) {
       Lines b;
 
@@ -59,9 +63,7 @@ public:
   }
 
 };
-
-FASTLED_NAMESPACE_END
-
+}  // namespace fl
 #endif
 
 #endif

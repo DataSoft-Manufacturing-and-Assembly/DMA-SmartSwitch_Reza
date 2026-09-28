@@ -1,184 +1,35 @@
+#pragma once
+
 #ifndef __INC_LIB8TION_H
 #define __INC_LIB8TION_H
 
-#include "FastLED.h"
-#include "lib8tion/types.h"
+#include "fl/math/types.h"
+#include "fl/stl/compiler_control.h"
 
-#ifndef __INC_LED_SYSDEFS_H
-#error WTH?  led_sysdefs needs to be included first
-#endif
+#include "led_sysdefs.h"
+#include "platforms/is_platform.h"
+
 
 /// @file lib8tion.h
 /// Fast, efficient 8-bit math functions specifically
-/// designed for high-performance LED programming. 
+/// designed for high-performance LED programming.
 
-#include <stdint.h>
-#include "lib8tion/lib8static.h"
-#include "lib8tion/qfx.h"
+#include "fl/stl/stdint.h"
+#include "fl/math/lib8static.h"
+#include "fl/math/math8.h"
+#include "fl/math/qfx.h"
+#include "fl/math/memmove.h"
+#include "platforms/math8_config.h"
+#include "fl/math/ease.h"
+#include "fl/math/squarewave.h"
+#include "fl/math/beat.h"
+#include "fl/math/time_functions.h"
+#include "fl/stl/chrono.h"
 
 
-#if !defined(__AVR__)
-#include <string.h>
-// for memmove, memcpy, and memset if not defined here
-#endif // end of !defined(__AVR__)
-
-#if defined(__arm__)
-
-#if defined(FASTLED_TEENSY3)
-// Can use Cortex M4 DSP instructions
-#define QADD8_C 0
-#define QADD7_C 0
-#define QADD8_ARM_DSP_ASM 1
-#define QADD7_ARM_DSP_ASM 1
-#else
-// Generic ARM
-#define QADD8_C 1
-#define QADD7_C 1
-#endif // end of defined(FASTLED_TEENSY3)
-
-#define QSUB8_C 1
-#define SCALE8_C 1
-#define SCALE16BY8_C 1
-#define SCALE16_C 1
-#define ABS8_C 1
-#define MUL8_C 1
-#define QMUL8_C 1
-#define ADD8_C 1
-#define SUB8_C 1
-#define EASE8_C 1
-#define AVG8_C 1
-#define AVG8R_C 1
-#define AVG7_C 1
-#define AVG16_C 1
-#define AVG16R_C 1
-#define AVG15_C 1
-#define BLEND8_C 1
-
-// end of #if defined(__arm__)
-
-#elif defined(ARDUINO_ARCH_APOLLO3)
-
-// Default to using the standard C functions for now
-#define QADD8_C 1
-#define QADD7_C 1
-#define QSUB8_C 1
-#define SCALE8_C 1
-#define SCALE16BY8_C 1
-#define SCALE16_C 1
-#define ABS8_C 1
-#define MUL8_C 1
-#define QMUL8_C 1
-#define ADD8_C 1
-#define SUB8_C 1
-#define EASE8_C 1
-#define AVG8_C 1
-#define AVG8R_C 1
-#define AVG7_C 1
-#define AVG16_C 1
-#define AVG16R_C 1
-#define AVG15_C 1
-#define BLEND8_C 1
-
-// end of #elif defined(ARDUINO_ARCH_APOLLO3)
-
-#elif defined(__AVR__)
-
-// AVR ATmega and friends Arduino
-
-#define QADD8_C 0
-#define QADD7_C 0
-#define QSUB8_C 0
-#define ABS8_C 0
-#define ADD8_C 0
-#define SUB8_C 0
-#define AVG8_C 0
-#define AVG8R_C 0
-#define AVG7_C 0
-#define AVG16_C 0
-#define AVG16R_C 0
-#define AVG15_C 0
-
-#define QADD8_AVRASM 1
-#define QADD7_AVRASM 1
-#define QSUB8_AVRASM 1
-#define ABS8_AVRASM 1
-#define ADD8_AVRASM 1
-#define SUB8_AVRASM 1
-#define AVG8_AVRASM 1
-#define AVG8R_AVRASM 1
-#define AVG7_AVRASM 1
-#define AVG16_AVRASM 1
-#define AVG16R_AVRASM 1
-#define AVG15_AVRASM 1
-
-// Note: these require hardware MUL instruction
-//       -- sorry, ATtiny!
-#if !defined(LIB8_ATTINY)
-#define SCALE8_C 0
-#define SCALE16BY8_C 0
-#define SCALE16_C 0
-#define MUL8_C 0
-#define QMUL8_C 0
-#define EASE8_C 0
-#define BLEND8_C 0
-#define SCALE8_AVRASM 1
-#define SCALE16BY8_AVRASM 1
-#define SCALE16_AVRASM 1
-#define MUL8_AVRASM 1
-#define QMUL8_AVRASM 1
-#define EASE8_AVRASM 1
-#define CLEANUP_R1_AVRASM 1
-#define BLEND8_AVRASM 1
-#else
-// On ATtiny, we just use C implementations
-#define SCALE8_C 1
-#define SCALE16BY8_C 1
-#define SCALE16_C 1
-#define MUL8_C 1
-#define QMUL8_C 1
-#define EASE8_C 1
-#define BLEND8_C 1
-#define SCALE8_AVRASM 0
-#define SCALE16BY8_AVRASM 0
-#define SCALE16_AVRASM 0
-#define MUL8_AVRASM 0
-#define QMUL8_AVRASM 0
-#define EASE8_AVRASM 0
-#define BLEND8_AVRASM 0
-#endif // end of !defined(LIB8_ATTINY)
-
-// end of #elif defined(__AVR__)
-
-#else
-
-// Doxygen: ignore these macros
-/// @cond
-
-// unspecified architecture, so
-// no ASM, everything in C
-#define QADD8_C 1
-#define QADD7_C 1
-#define QSUB8_C 1
-#define SCALE8_C 1
-#define SCALE16BY8_C 1
-#define SCALE16_C 1
-#define ABS8_C 1
-#define MUL8_C 1
-#define QMUL8_C 1
-#define ADD8_C 1
-#define SUB8_C 1
-#define EASE8_C 1
-#define AVG8_C 1
-#define AVG8R_C 1
-#define AVG7_C 1
-#define AVG16_C 1
-#define AVG16R_C 1
-#define AVG15_C 1
-#define BLEND8_C 1
-
-/// @endcond
-
-#endif
+#if !defined(FL_IS_AVR)
+// memmove, memcpy, and memset are defined in lib8tion/memmove.h and fl/stl/cstring.h
+#endif // end of !defined(FL_IS_AVR)
 
 /// @defgroup lib8tion Fast Math Functions
 /// Fast, efficient 8-bit math functions specifically
@@ -195,15 +46,15 @@
 ///    Instead of wrapping around if an overflow occurs,
 ///    these routines just 'clamp' the output at a maxumum
 ///    of 255, or a minimum of 0.  Useful for adding pixel
-///    values.  E.g., qadd8( 200, 100) = 255.
+///    values.  E.g., fl::qadd8( 200, 100) = 255.
 ///      @code
-///      qadd8( i, j) == MIN( (i + j), 0xFF )
-///      qsub8( i, j) == MAX( (i - j), 0 )
+///      fl::qadd8( i, j) == fl::min( (i + j), 0xFF )
+///      fl::qsub8( i, j) == fl::max( (i - j), 0 )
 ///      @endcode
 ///
 ///  - Saturating signed 8-bit ("7-bit") add.
 ///      @code
-///      qadd7( i, j) == MIN( (i + j), 0x7F)
+///      qadd7( i, j) == fl::min( (i + j), 0x7F)
 ///      @endcode
 ///
 ///  - Scaling (down) of unsigned 8- and 16- bit values.
@@ -258,7 +109,7 @@
 ///    These are provided mostly for completeness,
 ///    not particularly for performance.
 ///      @code
-///      mul8( i, j)  == (i * j) & 0xFF
+///      fl::mul8( i, j)  == (i * j) & 0xFF
 ///      add8( i, j)  == (i + j) & 0xFF
 ///      sub8( i, j)  == (i - j) & 0xFF
 ///      @endcode
@@ -328,10 +179,10 @@
 ///    fixed point fraction (fract8 or fract16).
 ///      @code
 ///      lerp8by8(   fromU8, toU8, fract8 )
-///      lerp16by8(  fromU16, toU16, fract8 )
-///      lerp15by8(  fromS16, toS16, fract8 )
+///      fl::lerp16by8(  fromU16, toU16, fract8 )
+///      fl::lerp15by8(  fromS16, toS16, fract8 )
 ///        == from + (( to - from ) * fract8) / 256)
-///      lerp16by16( fromU16, toU16, fract16 )
+///      fl::lerp16by16( fromU16, toU16, fract16 )
 ///        == from + (( to - from ) * fract16) / 65536)
 ///      map8( in, rangeStart, rangeEnd)
 ///        == map( in, 0, 255, rangeStart, rangeEnd);
@@ -374,17 +225,95 @@
 
 
 
-#include "lib8tion/math8.h"
-#include "lib8tion/scale8.h"
-#include "lib8tion/random8.h"
-#include "lib8tion/trig8.h"
+#include "fl/math/math8.h"
+#include "fl/math/scale8.h"
+#include "fl/math/random8.h"
+#include "fl/math/trig8.h"
+
+// Bring types and common math functions into global scope for backward compatibility.
+// Only import names that are actually defined in namespace fl (via platforms/ headers).
+// Functions defined with LIB8STATIC outside namespace fl (e.g., random8.h) are already global.
+//
+// On AVR, Arduino's USBAPI.h defines u8/u16/u32 at global scope with potentially
+// different underlying types (e.g. unsigned short vs unsigned int for u16).
+// Skip those to avoid redeclaration conflicts.
+#if !defined(FL_IS_AVR)
+using fl::u8;
+// On AVR+Arduino, USBAPI.h (included via Arduino.h) already provides a global
+// 'typedef unsigned short u16;'. fl::u16 on AVR is 'unsigned int' — same width
+// but a different type — so 'using fl::u16;' would conflict. Skip it on AVR and
+// let USBAPI.h's typedef provide the global u16 name instead.
+#if !defined(FL_IS_AVR) || !defined(ARDUINO)
+using fl::u16;
+#endif
+using fl::u32;
+#endif
+using fl::u64;
+using fl::i8;
+using fl::i16;
+using fl::i32;
+using fl::i64;
+// scale8.h (namespace fl)
+using fl::scale8;
+using fl::scale8_video;
+using fl::scale16;
+using fl::scale16by8;
+using fl::scale8_LEAVING_R1_DIRTY;
+using fl::nscale8x3;
+using fl::nscale8x3_video;
+using fl::scale8_video_LEAVING_R1_DIRTY;
+using fl::cleanup_R1;
+// trig8.h (namespace fl)
+using fl::sin8;
+using fl::sin16;
+using fl::cos8;
+using fl::cos16;
+// math8.h (namespace fl)
+using fl::qadd8;
+using fl::qsub8;
+using fl::qadd7;
+using fl::qmul8;
+using fl::add8;
+using fl::add8to16;
+using fl::sub8;
+using fl::avg8;
+using fl::avg16;
+using fl::avg8r;
+using fl::avg16r;
+using fl::avg7;
+using fl::avg15;
+using fl::mul8;
+using fl::abs8;
+using fl::blend8;
+using fl::mod8;
+using fl::addmod8;
+using fl::submod8;
+using fl::sqrt16;
+using fl::sqrt8;
+using fl::dim8_raw;
+// qfx.h (namespace fl)
+using fl::q44;
+using fl::q62;
+using fl::q88;
+using fl::q124;
+// squarewave.h (namespace fl)
+using fl::squarewave8;
+// beat.h (namespace fl)
+using fl::beat88;
+using fl::beat16;
+using fl::beat8;
+using fl::beatsin88;
+using fl::beatsin16;
+using fl::beatsin8;
+// time_functions.h (namespace fl)
+using fl::seconds16;
+using fl::minutes16;
+using fl::hours8;
+using fl::div1024_32_16;
+using fl::bseconds16;
 
 ///////////////////////////////////////////////////////////////////////
 
-
-
-
-FASTLED_NAMESPACE_BEGIN
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -397,7 +326,7 @@ FASTLED_NAMESPACE_BEGIN
 /// Conversion from 16-bit fixed point (::sfract15) to IEEE754 32-bit float.
 LIB8STATIC float sfract15ToFloat( sfract15 y)
 {
-    return y / 32768.0;
+    return y / 32768.0f;
 }
 
 /// Conversion from IEEE754 float in the range (-1,1) to 16-bit fixed point (::sfract15).
@@ -405,34 +334,13 @@ LIB8STATIC float sfract15ToFloat( sfract15 y)
 /// representable range is 0.99996948242 to -0.99996948242, in steps of 0.00003051757.
 LIB8STATIC sfract15 floatToSfract15( float f)
 {
-    return f * 32768.0;
+    return static_cast<sfract15>(f * 32768.0f);
 }
 
 /// @} FloatConversions
 
 
 
-///////////////////////////////////////////////////////////////////////
-///
-/// @defgroup FastMemory Fast Memory Functions for AVR
-/// Alternatives to memmove, memcpy, and memset that are
-/// faster on AVR than standard avr-libc 1.8. 
-/// @{
-
-#if defined(__AVR__) || defined(FASTLED_DOXYGEN)
-extern "C" {
-void * memmove8( void * dst, const void * src, uint16_t num );  ///< Faster alternative to memmove() on AVR
-void * memcpy8 ( void * dst, const void * src, uint16_t num )  __attribute__ ((noinline));  ///< Faster alternative to memcpy() on AVR
-void * memset8 ( void * ptr, uint8_t value, uint16_t num ) __attribute__ ((noinline)) ;  ///< Faster alternative to memset() on AVR
-}
-#else
-// on non-AVR platforms, these names just call standard libc.
-#define memmove8 memmove
-#define memcpy8 memcpy
-#define memset8 memset
-#endif
-
-/// @} FastMemory
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -452,16 +360,16 @@ void * memset8 ( void * ptr, uint8_t value, uint16_t num ) __attribute__ ((noinl
 
 /// Linear interpolation between two unsigned 8-bit values,
 /// with 8-bit fraction
-LIB8STATIC uint8_t lerp8by8( uint8_t a, uint8_t b, fract8 frac)
+LIB8STATIC fl::u8 lerp8by8( fl::u8 a, fl::u8 b, fract8 frac)
 {
-    uint8_t result;
+    fl::u8 result;
     if( b > a) {
-        uint8_t delta = b - a;
-        uint8_t scaled = scale8( delta, frac);
+        fl::u8 delta = b - a;
+        fl::u8 scaled = scale8( delta, frac);
         result = a + scaled;
     } else {
-        uint8_t delta = a - b;
-        uint8_t scaled = scale8( delta, frac);
+        fl::u8 delta = a - b;
+        fl::u8 scaled = scale8( delta, frac);
         result = a - scaled;
     }
     return result;
@@ -469,16 +377,16 @@ LIB8STATIC uint8_t lerp8by8( uint8_t a, uint8_t b, fract8 frac)
 
 /// Linear interpolation between two unsigned 16-bit values,
 /// with 16-bit fraction
-LIB8STATIC uint16_t lerp16by16( uint16_t a, uint16_t b, fract16 frac)
+LIB8STATIC fl::u16 lerp16by16( fl::u16 a, fl::u16 b, fract16 frac)
 {
-    uint16_t result;
+    fl::u16 result;
     if( b > a ) {
-        uint16_t delta = b - a;
-        uint16_t scaled = scale16(delta, frac);
+        fl::u16 delta = b - a;
+        fl::u16 scaled = scale16(delta, frac);
         result = a + scaled;
     } else {
-        uint16_t delta = a - b;
-        uint16_t scaled = scale16( delta, frac);
+        fl::u16 delta = a - b;
+        fl::u16 scaled = scale16( delta, frac);
         result = a - scaled;
     }
     return result;
@@ -486,16 +394,16 @@ LIB8STATIC uint16_t lerp16by16( uint16_t a, uint16_t b, fract16 frac)
 
 /// Linear interpolation between two unsigned 16-bit values,
 /// with 8-bit fraction
-LIB8STATIC uint16_t lerp16by8( uint16_t a, uint16_t b, fract8 frac)
+LIB8STATIC fl::u16 lerp16by8( fl::u16 a, fl::u16 b, fract8 frac)
 {
-    uint16_t result;
+    fl::u16 result;
     if( b > a) {
-        uint16_t delta = b - a;
-        uint16_t scaled = scale16by8( delta, frac);
+        fl::u16 delta = b - a;
+        fl::u16 scaled = scale16by8( delta, frac);
         result = a + scaled;
     } else {
-        uint16_t delta = a - b;
-        uint16_t scaled = scale16by8( delta, frac);
+        fl::u16 delta = a - b;
+        fl::u16 scaled = scale16by8( delta, frac);
         result = a - scaled;
     }
     return result;
@@ -503,16 +411,16 @@ LIB8STATIC uint16_t lerp16by8( uint16_t a, uint16_t b, fract8 frac)
 
 /// Linear interpolation between two signed 15-bit values,
 /// with 8-bit fraction
-LIB8STATIC int16_t lerp15by8( int16_t a, int16_t b, fract8 frac)
+LIB8STATIC fl::i16 lerp15by8( fl::i16 a, fl::i16 b, fract8 frac)
 {
-    int16_t result;
+    fl::i16 result;
     if( b > a) {
-        uint16_t delta = b - a;
-        uint16_t scaled = scale16by8( delta, frac);
+        fl::u16 delta = b - a;
+        fl::u16 scaled = scale16by8( delta, frac);
         result = a + scaled;
     } else {
-        uint16_t delta = a - b;
-        uint16_t scaled = scale16by8( delta, frac);
+        fl::u16 delta = a - b;
+        fl::u16 scaled = scale16by8( delta, frac);
         result = a - scaled;
     }
     return result;
@@ -520,16 +428,16 @@ LIB8STATIC int16_t lerp15by8( int16_t a, int16_t b, fract8 frac)
 
 /// Linear interpolation between two signed 15-bit values,
 /// with 8-bit fraction
-LIB8STATIC int16_t lerp15by16( int16_t a, int16_t b, fract16 frac)
+LIB8STATIC fl::i16 lerp15by16( fl::i16 a, fl::i16 b, fract16 frac)
 {
-    int16_t result;
+    fl::i16 result;
     if( b > a) {
-        uint16_t delta = b - a;
-        uint16_t scaled = scale16( delta, frac);
+        fl::u16 delta = b - a;
+        fl::u16 scaled = scale16( delta, frac);
         result = a + scaled;
     } else {
-        uint16_t delta = a - b;
-        uint16_t scaled = scale16( delta, frac);
+        fl::u16 delta = a - b;
+        fl::u16 scaled = scale16( delta, frac);
         result = a - scaled;
     }
     return result;
@@ -556,10 +464,10 @@ LIB8STATIC int16_t lerp15by16( int16_t a, int16_t b, fract16 frac)
 ///   @endcode
 ///
 /// but faster and specifically designed for 8-bit values.
-LIB8STATIC uint8_t map8( uint8_t in, uint8_t rangeStart, uint8_t rangeEnd)
+LIB8STATIC fl::u8 map8( fl::u8 in, fl::u8 rangeStart, fl::u8 rangeEnd)
 {
-    uint8_t rangeWidth = rangeEnd - rangeStart;
-    uint8_t out = scale8( in, rangeWidth);
+    fl::u8 rangeWidth = rangeEnd - rangeStart;
+    fl::u8 out = scale8( in, rangeWidth);
     out += rangeStart;
     return out;
 }
@@ -577,14 +485,14 @@ LIB8STATIC uint8_t map8( uint8_t in, uint8_t rangeStart, uint8_t rangeEnd)
 /// 8-bit quadratic ease-in / ease-out function. 
 /// Takes around 13 cycles on AVR.
 #if (EASE8_C == 1) || defined(FASTLED_DOXYGEN)
-LIB8STATIC uint8_t ease8InOutQuad( uint8_t i)
+LIB8STATIC fl::u8 ease8InOutQuad(fl::u8 i)
 {
-    uint8_t j = i;
+    fl::u8 j = i;
     if( j & 0x80 ) {
         j = 255 - j;
     }
-    uint8_t jj  = scale8(  j, j);
-    uint8_t jj2 = jj << 1;
+    fl::u8 jj  = scale8(  j, j);
+    fl::u8 jj2 = jj << 1;
     if( i & 0x80 ) {
         jj2 = 255 - jj2;
     }
@@ -595,8 +503,8 @@ LIB8STATIC uint8_t ease8InOutQuad( uint8_t i)
 // This AVR asm version of ease8InOutQuad preserves one more
 // low-bit of precision than the C version, and is also slightly
 // smaller and faster.
-LIB8STATIC uint8_t ease8InOutQuad(uint8_t val) {
-    uint8_t j=val;
+LIB8STATIC fl::u8 ease8InOutQuad(fl::u8 val) {
+    fl::u8 j=val;
     asm volatile (
       "sbrc %[val], 7 \n"
       "com %[j]       \n"
@@ -620,20 +528,44 @@ LIB8STATIC uint8_t ease8InOutQuad(uint8_t val) {
 #error "No implementation for ease8InOutQuad available."
 #endif
 
-/// 16-bit quadratic ease-in / ease-out function. 
-/// C implementation at this point.
-LIB8STATIC uint16_t ease16InOutQuad( uint16_t i)
+LIB8STATIC fl::u16 ease16InOutQuad(fl::u16 i)
 {
-    uint16_t j = i;
-    if( j & 0x8000 ) {
+    // This is the legacy version, there is a slightly more accurate version in fl/ease.cpp
+    // with fl::easeInOutQuad16. However the difference is minimal.
+    //
+    // 16-bit quadratic ease-in / ease-out function
+    fl::u16 j = i;
+    if (j & 0x8000) {
         j = 65535 - j;
     }
-    uint16_t jj  = scale16( j, j);
-    uint16_t jj2 = jj << 1;
-    if( i & 0x8000 ) {
+    fl::u16 jj = scale16(j, j);
+    fl::u16 jj2 = jj << 1;
+    if (i & 0x8000) {
         jj2 = 65535 - jj2;
     }
     return jj2;
+}
+
+LIB8STATIC fl::u16 ease16InOutCubic(fl::u16 i)  {
+    // This function produces wrong results, use fl::easeInOutCubic16 instead
+    //
+    // 16-bit cubic ease-in / ease-out function
+    // Equivalent to ease8InOutCubic() but for 16-bit values
+    // Formula: 3(x^2) - 2(x^3) applied with proper ease-in-out curve
+
+    // Apply the cubic formula directly, similar to the 8-bit version
+    // scale16(a, b) computes (a * b) / 65536
+    fl::u32 ii = scale16(i, i);   // i^2 scaled to 16-bit
+    fl::u32 iii = scale16(ii, i); // i^3 scaled to 16-bit
+
+    // Apply cubic formula: 3x^2 - 2x^3
+    fl::u32 r1 = (3 * ii) - (2 * iii);
+
+    // Clamp result to 16-bit range
+    if (r1 > 65535) {
+        return 65535;
+    }
+    return (fl::u16)r1;
 }
 
 
@@ -641,16 +573,16 @@ LIB8STATIC uint16_t ease16InOutQuad( uint16_t i)
 /// Takes around 18 cycles on AVR.
 LIB8STATIC fract8 ease8InOutCubic( fract8 i)
 {
-    uint8_t ii  = scale8_LEAVING_R1_DIRTY(  i, i);
-    uint8_t iii = scale8_LEAVING_R1_DIRTY( ii, i);
+    fl::u8 ii  = scale8_LEAVING_R1_DIRTY(  i, i);
+    fl::u8 iii = scale8_LEAVING_R1_DIRTY( ii, i);
 
-    uint16_t r1 = (3 * (uint16_t)(ii)) - ( 2 * (uint16_t)(iii));
+    fl::u16 r1 = (3 * (fl::u16)(ii)) - ( 2 * (fl::u16)(iii));
 
     /* the code generated for the above *'s automatically
        cleans up R1, so there's no need to explicitily call
        cleanup_R1(); */
 
-    uint8_t result = r1;
+    fl::u8 result = r1;
 
     // if we got "256", return 255:
     if( r1 & 0x100 ) {
@@ -689,7 +621,7 @@ LIB8STATIC fract8 ease8InOutApprox( fract8 i)
 }
 
 #elif EASE8_AVRASM == 1
-LIB8STATIC uint8_t ease8InOutApprox( fract8 i)
+LIB8STATIC fl::u8 ease8InOutApprox( fract8 i)
 {
     // takes around 7 cycles on AVR
     asm volatile (
@@ -743,12 +675,12 @@ LIB8STATIC uint8_t ease8InOutApprox( fract8 i)
 ///
 /// On AVR this function takes just three cycles.
 ///
-LIB8STATIC uint8_t triwave8(uint8_t in)
+LIB8STATIC fl::u8 triwave8(fl::u8 in)
 {
     if( in & 0x80) {
         in = 255 - in;
     }
-    uint8_t out = in << 1;
+    fl::u8 out = in << 1;
     return out;
 }
 
@@ -762,7 +694,7 @@ LIB8STATIC uint8_t triwave8(uint8_t in)
 ///
 /// This is even faster than "sin8()", and has
 /// a slightly different curve shape.
-LIB8STATIC uint8_t quadwave8(uint8_t in)
+LIB8STATIC fl::u8 quadwave8(fl::u8 in)
 {
     return ease8InOutQuad( triwave8( in));
 }
@@ -770,43 +702,14 @@ LIB8STATIC uint8_t quadwave8(uint8_t in)
 /// Cubic waveform generator. Spends visibly more time
 /// at the limits than "sine" does. 
 /// @copydetails quadwave8()
-LIB8STATIC uint8_t cubicwave8(uint8_t in)
+LIB8STATIC fl::u8 cubicwave8(fl::u8 in)
 {
     return ease8InOutCubic( triwave8( in));
 }
 
 
-/// Square wave generator.
-/// Useful for turning a one-byte ever-increasing value
-/// into a one-byte value that is either 0 or 255.
-/// The width of the output "pulse" is determined by
-/// the pulsewidth argument:
-///   @code
-///   if pulsewidth is 255, output is always 255.
-///   if pulsewidth < 255, then
-///     if input < pulsewidth  then output is 255
-///     if input >= pulsewidth then output is 0
-///   @endcode
-///
-/// The output looking like:
-///
-///   @code
-///     255   +--pulsewidth--+
-///      .    |              |
-///      0    0              +--------(256-pulsewidth)--------
-///   @endcode
-///
-/// @param in input value
-/// @param pulsewidth width of the output pulse
-/// @returns square wave output
-LIB8STATIC uint8_t squarewave8( uint8_t in, uint8_t pulsewidth=128)
-{
-    if( in < pulsewidth || (pulsewidth == 255)) {
-        return 255;
-    } else {
-        return 0;
-    }
-}
+// squarewave8 is now in fl/math/squarewave.h (namespace fl),
+// brought into global scope via 'using fl::squarewave8' above.
 
 /// @} WaveformGenerators
 
@@ -820,7 +723,7 @@ LIB8STATIC uint8_t squarewave8( uint8_t in, uint8_t pulsewidth=128)
 ///
 /// @{
 
-#if ((defined(ARDUINO) || defined(SPARK) || defined(FASTLED_HAS_MILLIS)) && !defined(USE_GET_MILLISECOND_TIMER)) || defined(FASTLED_DOXYGEN)
+#if ((defined(ARDUINO) || defined(FL_IS_STM32_F2) || defined(FASTLED_HAS_MILLIS)) && !defined(USE_GET_MILLISECOND_TIMER)) || defined(FASTLED_DOXYGEN)
 // Forward declaration of Arduino function 'millis'.
 //uint32_t millis();
 
@@ -834,9 +737,9 @@ LIB8STATIC uint8_t squarewave8( uint8_t in, uint8_t pulsewidth=128)
 ///
 /// You can also force use of the get_millisecond_timer() function
 /// by \#defining `USE_GET_MILLISECOND_TIMER`.
-#define GET_MILLIS millis
+#define GET_MILLIS fl::millis
 #else
-uint32_t get_millisecond_timer();
+fl::u32 get_millisecond_timer();
 #define GET_MILLIS get_millisecond_timer
 #endif
 
@@ -847,228 +750,11 @@ uint32_t get_millisecond_timer();
 /// @{
 
 
-///////////////////////////////////////////////////////////////////////
-///
-/// @defgroup BeatGenerators Waveform Beat Generators
-/// Waveform generators that reset at a given number
-/// of "beats per minute" (BPM).
-///
-/// The standard "beat" functions generate "sawtooth" waves which rise from
-/// 0 up to a max value and then reset, continuously repeating that cycle at
-/// the specified frequency (BPM).
-///
-/// The "sin" versions function similarly, but create an oscillating sine wave
-/// at the specified frequency.
-///
-/// BPM can be supplied two ways. The simpler way of specifying BPM is as
-/// a simple 8-bit integer from 1-255, (e.g., "120").
-/// The more sophisticated way of specifying BPM allows for fractional
-/// "Q8.8" fixed point number (an ::accum88) with an 8-bit integer part and
-/// an 8-bit fractional part.  The easiest way to construct this is to multiply
-/// a floating point BPM value (e.g. 120.3) by 256, (e.g. resulting in 30796
-/// in this case), and pass that as the 16-bit BPM argument.
-///
-/// Originally these functions were designed to make an entire animation project pulse.
-/// with brightness. For that effect, add this line just above your existing call to
-/// "FastLED.show()":
-///   @code
-///   uint8_t bright = beatsin8( 60 /*BPM*/, 192 /*dimmest*/, 255 /*brightest*/ ));
-///   FastLED.setBrightness( bright );
-///   FastLED.show();
-///   @endcode
-///
-/// The entire animation will now pulse between brightness 192 and 255 once per second.
-///
-/// @warning Any "BPM88" parameter **MUST** always be provided in Q8.8 format!
-/// @note The beat generators need access to a millisecond counter
-/// to track elapsed time. See ::GET_MILLIS for reference. When using the Arduino
-/// `millis()` function, accuracy is a bit better than one part in a thousand.
-///
-/// @{
+// Beat generators (beat88, beat16, beat8, beatsin88, beatsin16, beatsin8) are now
+// in fl/math/beat.h (namespace fl), brought into global scope via 'using' above.
 
-
-/// Generates a 16-bit "sawtooth" wave at a given BPM, with BPM
-/// specified in Q8.8 fixed-point format.
-/// @param beats_per_minute_88 the frequency of the wave, in Q8.8 format
-/// @param timebase the time offset of the wave from the millis() timer
-/// @warning The BPM parameter **MUST** be provided in Q8.8 format! E.g.
-/// for 120 BPM it would be 120*256 = 30720. If you just want to specify
-/// "120", use beat16() or beat8().
-LIB8STATIC uint16_t beat88( accum88 beats_per_minute_88, uint32_t timebase = 0)
-{
-    // BPM is 'beats per minute', or 'beats per 60000ms'.
-    // To avoid using the (slower) division operator, we
-    // want to convert 'beats per 60000ms' to 'beats per 65536ms',
-    // and then use a simple, fast bit-shift to divide by 65536.
-    //
-    // The ratio 65536:60000 is 279.620266667:256; we'll call it 280:256.
-    // The conversion is accurate to about 0.05%, more or less,
-    // e.g. if you ask for "120 BPM", you'll get about "119.93".
-    return (((GET_MILLIS()) - timebase) * beats_per_minute_88 * 280) >> 16;
-}
-
-/// Generates a 16-bit "sawtooth" wave at a given BPM
-/// @param beats_per_minute the frequency of the wave, in decimal
-/// @param timebase the time offset of the wave from the millis() timer
-LIB8STATIC uint16_t beat16( accum88 beats_per_minute, uint32_t timebase = 0)
-{
-    // Convert simple 8-bit BPM's to full Q8.8 accum88's if needed
-    if( beats_per_minute < 256) beats_per_minute <<= 8;
-    return beat88(beats_per_minute, timebase);
-}
-
-/// Generates an 8-bit "sawtooth" wave at a given BPM
-/// @param beats_per_minute the frequency of the wave, in decimal
-/// @param timebase the time offset of the wave from the millis() timer
-LIB8STATIC uint8_t beat8( accum88 beats_per_minute, uint32_t timebase = 0)
-{
-    return beat16( beats_per_minute, timebase) >> 8;
-}
-
-
-/// Generates a 16-bit sine wave at a given BPM that oscillates within
-/// a given range.
-/// @param beats_per_minute_88 the frequency of the wave, in Q8.8 format
-/// @param lowest the lowest output value of the sine wave
-/// @param highest the highest output value of the sine wave
-/// @param timebase the time offset of the wave from the millis() timer
-/// @param phase_offset phase offset of the wave from the current position
-/// @warning The BPM parameter **MUST** be provided in Q8.8 format! E.g.
-/// for 120 BPM it would be 120*256 = 30720. If you just want to specify
-/// "120", use beatsin16() or beatsin8().
-LIB8STATIC uint16_t beatsin88( accum88 beats_per_minute_88, uint16_t lowest = 0, uint16_t highest = 65535,
-                              uint32_t timebase = 0, uint16_t phase_offset = 0)
-{
-    uint16_t beat = beat88( beats_per_minute_88, timebase);
-    uint16_t beatsin = (sin16( beat + phase_offset) + 32768);
-    uint16_t rangewidth = highest - lowest;
-    uint16_t scaledbeat = scale16( beatsin, rangewidth);
-    uint16_t result = lowest + scaledbeat;
-    return result;
-}
-
-/// Generates a 16-bit sine wave at a given BPM that oscillates within
-/// a given range.
-/// @param beats_per_minute the frequency of the wave, in decimal
-/// @param lowest the lowest output value of the sine wave
-/// @param highest the highest output value of the sine wave
-/// @param timebase the time offset of the wave from the millis() timer
-/// @param phase_offset phase offset of the wave from the current position
-LIB8STATIC uint16_t beatsin16( accum88 beats_per_minute, uint16_t lowest = 0, uint16_t highest = 65535,
-                               uint32_t timebase = 0, uint16_t phase_offset = 0)
-{
-    uint16_t beat = beat16( beats_per_minute, timebase);
-    uint16_t beatsin = (sin16( beat + phase_offset) + 32768);
-    uint16_t rangewidth = highest - lowest;
-    uint16_t scaledbeat = scale16( beatsin, rangewidth);
-    uint16_t result = lowest + scaledbeat;
-    return result;
-}
-
-/// Generates an 8-bit sine wave at a given BPM that oscillates within
-/// a given range.
-/// @param beats_per_minute the frequency of the wave, in decimal
-/// @param lowest the lowest output value of the sine wave
-/// @param highest the highest output value of the sine wave
-/// @param timebase the time offset of the wave from the millis() timer
-/// @param phase_offset phase offset of the wave from the current position
-LIB8STATIC uint8_t beatsin8( accum88 beats_per_minute, uint8_t lowest = 0, uint8_t highest = 255,
-                            uint32_t timebase = 0, uint8_t phase_offset = 0)
-{
-    uint8_t beat = beat8( beats_per_minute, timebase);
-    uint8_t beatsin = sin8( beat + phase_offset);
-    uint8_t rangewidth = highest - lowest;
-    uint8_t scaledbeat = scale8( beatsin, rangewidth);
-    uint8_t result = lowest + scaledbeat;
-    return result;
-}
-
-/// @} BeatGenerators
-
-/// @} lib8tion, to exclude timekeeping functions
-
-
-///////////////////////////////////////////////////////////////////////
-///
-/// @addtogroup Timekeeping
-/// @{
-
-/// Return the current seconds since boot in a 16-bit value.  Used as part of the
-/// "every N time-periods" mechanism
-LIB8STATIC uint16_t seconds16()
-{
-    uint32_t ms = GET_MILLIS();
-    uint16_t s16;
-    s16 = ms / 1000;
-    return s16;
-}
-
-/// Return the current minutes since boot in a 16-bit value.  Used as part of the
-/// "every N time-periods" mechanism
-LIB8STATIC uint16_t minutes16()
-{
-    uint32_t ms = GET_MILLIS();
-    uint16_t m16;
-    m16 = (ms / (60000L)) & 0xFFFF;
-    return m16;
-}
-
-/// Return the current hours since boot in an 8-bit value.  Used as part of the
-/// "every N time-periods" mechanism
-LIB8STATIC uint8_t hours8()
-{
-    uint32_t ms = GET_MILLIS();
-    uint8_t h8;
-    h8 = (ms / (3600000L)) & 0xFF;
-    return h8;
-}
-
-
-/// Helper routine to divide a 32-bit value by 1024, returning
-/// only the low 16 bits. 
-/// You'd think this would be just
-///   @code
-///   result = (in32 >> 10) & 0xFFFF;
-///   @endcode
-/// And on ARM, that's what you want and all is well.
-/// But on AVR that code turns into a loop that executes
-/// a four-byte shift ten times: 40 shifts in all, plus loop
-/// overhead. This routine gets exactly the same result with
-/// just six shifts (vs 40), and no loop overhead.
-/// Used to convert millis to "binary seconds" aka bseconds:
-/// one bsecond == 1024 millis.
-LIB8STATIC uint16_t div1024_32_16( uint32_t in32)
-{
-    uint16_t out16;
-#if defined(__AVR__)
-    asm volatile (
-        "  lsr %D[in]  \n\t"
-        "  ror %C[in]  \n\t"
-        "  ror %B[in]  \n\t"
-        "  lsr %D[in]  \n\t"
-        "  ror %C[in]  \n\t"
-        "  ror %B[in]  \n\t"
-        "  mov %B[out],%C[in] \n\t"
-        "  mov %A[out],%B[in] \n\t"
-        : [in] "+r" (in32),
-        [out] "=r" (out16)
-    );
-#else
-    out16 = (in32 >> 10) & 0xFFFF;
-#endif
-    return out16;
-}
-
-/// Returns the current time-since-boot in
-/// "binary seconds", which are actually 1024/1000 of a
-/// second long.
-LIB8STATIC uint16_t bseconds16()
-{
-    uint32_t ms = GET_MILLIS();
-    uint16_t s16;
-    s16 = div1024_32_16( ms);
-    return s16;
-}
+// Time functions (seconds16, minutes16, hours8, div1024_32_16, bseconds16) are now
+// in fl/math/time_functions.h (namespace fl), brought into global scope via 'using' above.
 
 /// Preprocessor-based class "template" for ::CEveryNTime, used with `EVERY_N_TIME` timekeepers. 
 /// Classes to implement ::EVERY_N_MILLIS, ::EVERY_N_SECONDS,
@@ -1165,19 +851,19 @@ public:
 #endif  // FASTLED_DOXYGEN
 
 /// Create the CEveryNMillis class for millisecond intervals
-INSTANTIATE_EVERY_N_TIME_PERIODS(CEveryNMillis,uint32_t,GET_MILLIS);
+INSTANTIATE_EVERY_N_TIME_PERIODS(CEveryNMillis,fl::u32,GET_MILLIS);
 
 /// Create the CEveryNSeconds class for second intervals
-INSTANTIATE_EVERY_N_TIME_PERIODS(CEveryNSeconds,uint16_t,seconds16);
+INSTANTIATE_EVERY_N_TIME_PERIODS(CEveryNSeconds,fl::u16,seconds16);
 
 /// Create the CEveryNBSeconds class for bsecond intervals
-INSTANTIATE_EVERY_N_TIME_PERIODS(CEveryNBSeconds,uint16_t,bseconds16);
+INSTANTIATE_EVERY_N_TIME_PERIODS(CEveryNBSeconds,fl::u16,bseconds16);
 
 /// Create the CEveryNMinutes class for minutes intervals
-INSTANTIATE_EVERY_N_TIME_PERIODS(CEveryNMinutes,uint16_t,minutes16);
+INSTANTIATE_EVERY_N_TIME_PERIODS(CEveryNMinutes,fl::u16,minutes16);
 
 /// Create the CEveryNHours class for hours intervals
-INSTANTIATE_EVERY_N_TIME_PERIODS(CEveryNHours,uint8_t,hours8);
+INSTANTIATE_EVERY_N_TIME_PERIODS(CEveryNHours,fl::u8,hours8);
 
 /// Alias for CEveryNMillis
 #define CEveryNMilliseconds CEveryNMillis
@@ -1185,15 +871,15 @@ INSTANTIATE_EVERY_N_TIME_PERIODS(CEveryNHours,uint8_t,hours8);
 /// Create the CEveryNMillisDynamic class for dynamic millisecond intervals
 class CEveryNMillisDynamic {
 public:
-    uint32_t mPrevTrigger;
-    uint32_t mPeriod;
+    fl::u32 mPrevTrigger;
+    fl::u32 mPeriod;
 
-    CEveryNMillisDynamic(uint32_t period) : mPeriod(period) { reset(); };
-    uint32_t getTime() { return GET_MILLIS(); };
-    uint32_t getPeriod() const { return mPeriod; };
-    uint32_t getElapsed() { return getTime() - mPrevTrigger; }
-    uint32_t getRemaining() { return getPeriod() - getElapsed(); }
-    uint32_t getLastTriggerTime() { return mPrevTrigger; }
+    CEveryNMillisDynamic(fl::u32 period) : mPeriod(period) { reset(); };
+    fl::u32 getTime() { return GET_MILLIS(); };
+    fl::u32 getPeriod() const { return mPeriod; };
+    fl::u32 getElapsed() { return getTime() - mPrevTrigger; }
+    fl::u32 getRemaining() { return getPeriod() - getElapsed(); }
+    fl::u32 getLastTriggerTime() { return mPrevTrigger; }
     bool ready() {
         bool isReady = (getElapsed() >= getPeriod());
         if( isReady ) { reset(); }
@@ -1201,11 +887,52 @@ public:
     }
     void reset() { mPrevTrigger = getTime(); };
     void trigger() { mPrevTrigger = getTime() - getPeriod(); };
-    void setPeriod(uint32_t period) { mPeriod = period; }
+    void setPeriod(fl::u32 period) { mPeriod = period; }
 
     operator bool() { return ready(); }
 };
 /// @} CEveryNTime Base Classes
+
+
+
+// ————————————————————————————————————————————————
+// Random‐interval version of EVERY_N_MILLISECONDS:
+// on each trigger, pick the next period randomly in [MIN..MAX].
+// ————————————————————————————————————————————————
+class CEveryNMillisRandom {
+public:
+    fl::u32 mPrevTrigger;
+    fl::u32 mPeriod;
+    fl::u32 mMinPeriod;
+    fl::u32 mMaxPeriod;
+
+    CEveryNMillisRandom(fl::u32 minPeriod, fl::u32 maxPeriod)
+      : mMinPeriod(minPeriod), mMaxPeriod(maxPeriod)
+    {
+        computeNext();
+        reset();
+    }
+
+    void computeNext() {
+        // random16(x) returns [0..x-1], so this yields MIN..MAX
+        fl::u32 range = mMaxPeriod - mMinPeriod + 1;
+        mPeriod = mMinPeriod + random16(range);
+    }
+
+    fl::u32 getTime() const { return GET_MILLIS(); }
+
+    bool ready() {
+        fl::u32 now = getTime();
+        if (now - mPrevTrigger >= mPeriod) {
+            mPrevTrigger = now;
+            computeNext();
+            return true;
+        }
+        return false;
+    }
+
+    void reset() { mPrevTrigger = getTime(); }
+};
 
 #else
 
@@ -1240,11 +967,11 @@ public:
 
     operator bool() { return ready(); }
 };
-typedef CEveryNTimePeriods<uint16_t,seconds16> CEveryNSeconds;
-typedef CEveryNTimePeriods<uint16_t,bseconds16> CEveryNBSeconds;
-typedef CEveryNTimePeriods<uint32_t,millis> CEveryNMillis;
-typedef CEveryNTimePeriods<uint16_t,minutes16> CEveryNMinutes;
-typedef CEveryNTimePeriods<uint8_t,hours8> CEveryNHours;
+typedef CEveryNTimePeriods<fl::u16,seconds16> CEveryNSeconds;
+typedef CEveryNTimePeriods<fl::u16,bseconds16> CEveryNBSeconds;
+typedef CEveryNTimePeriods<fl::u32,millis> CEveryNMillis;
+typedef CEveryNTimePeriods<fl::u16,minutes16> CEveryNMinutes;
+typedef CEveryNTimePeriods<fl::u8,hours8> CEveryNHours;
 #endif
 
 
@@ -1328,6 +1055,15 @@ typedef CEveryNTimePeriods<uint8_t,hours8> CEveryNHours;
     NAME.setPeriod(PERIOD_FUNC); \
     if( NAME )
 
+
+#define EVERY_N_MILLISECONDS_RANDOM(MIN, MAX)                                 \
+    EVERY_N_MILLISECONDS_RANDOM_I(                                           \
+        CONCAT_MACRO(_permRand, __COUNTER__), MIN, MAX)
+
+#define EVERY_N_MILLISECONDS_RANDOM_I(NAME, MIN, MAX)                        \
+    static CEveryNMillisRandom NAME(MIN, MAX);                               \
+    if (NAME.ready())
+
 /// @} Every_N
 /// @} Timekeeping
 
@@ -1341,6 +1077,6 @@ typedef CEveryNTimePeriods<uint8_t,hours8> CEveryNHours;
 #define USE_GET_MILLISECOND_TIMER
 #endif
 
-FASTLED_NAMESPACE_END
-
 #endif
+
+// Using declarations moved to top of file

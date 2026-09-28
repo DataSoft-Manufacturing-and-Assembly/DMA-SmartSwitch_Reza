@@ -1,9 +1,18 @@
 #pragma once
-#include <stdint.h>
 
-#include "fl/namespace.h"
+// IWYU pragma: private
 
-FASTLED_NAMESPACE_BEGIN
+#include "fl/stl/stdint.h"
+#include "fl/system/fastpin_base.h"
+#include "platforms/arm/stm32/is_stm32.h"
+#include "fl/system/pin.h"  // For PinMode, PinValue enums
+#include "fl/stl/compiler_control.h"
+#include "fl/stl/noexcept.h"
+
+FL_DISABLE_WARNING_PUSH
+FL_DISABLE_WARNING_DEPRECATED_REGISTER
+
+namespace fl {
 
 
 #define _R(T) struct __gen_struct_ ## T
@@ -14,14 +23,14 @@ FASTLED_NAMESPACE_BEGIN
 /// that something about the way gcc does register allocation results in the bit-band code being slower.  It will need more fine tuning.
 /// The registers are data output, set output, clear output, toggle output, input, and direction
 
-template<uint8_t PIN, uint8_t _BIT, uint32_t _MASK, typename _GPIO> class _ARMPIN {
+template<u8 PIN, u8 _BIT, u32 _MASK, typename _GPIO> class _ARMPIN {
 
 public:
-    typedef volatile uint32_t * port_ptr_t;
-    typedef uint32_t port_t;
+    typedef volatile u32 * port_ptr_t;
+    typedef u32 port_t;
 
     #if 0
-    inline static void setOutput() {
+    inline static void setOutput() FL_NOEXCEPT {
         if(_BIT<8) {
             _CRL::r() = (_CRL::r() & (0xF << (_BIT*4)) | (0x1 << (_BIT*4)));
         } else {
@@ -31,16 +40,15 @@ public:
     inline static void setInput() { /* TODO */ } // TODO: preform MUX config { _PDDR::r() &= ~_MASK; }
     #endif
 
-    inline static void setOutput() { pinMode(PIN, OUTPUT); } // TODO: perform MUX config { _PDDR::r() |= _MASK; }
-    inline static void setInput() { pinMode(PIN, INPUT); } // TODO: preform MUX config { _PDDR::r() &= ~_MASK; }
+    inline static void setOutput() { pinMode(PIN, PinMode::Output); } // TODO: perform MUX config { _PDDR::r() |= _MASK; }
+    inline static void setInput() { pinMode(PIN, PinMode::Input); } // TODO: preform MUX config { _PDDR::r() &= ~_MASK; }
 
-#if defined(STM32F2XX)
+#if defined(FL_IS_STM32_F2)
     inline static void hi() __attribute__ ((always_inline)) { _GPIO::r()->BSRRL = _MASK; }
     inline static void lo() __attribute__ ((always_inline)) { _GPIO::r()->BSRRH = _MASK; }
 #else
     inline static void hi() __attribute__ ((always_inline)) { _GPIO::r()->BSRR = _MASK; }
-    inline static void lo() __attribute__ ((always_inline)) { _GPIO::r()->BRR = _MASK; }
-    // inline static void lo() __attribute__ ((always_inline)) { _GPIO::r()->BSRR = (_MASK<<16); }
+    inline static void lo() __attribute__ ((always_inline)) { _GPIO::r()->BSRR = (_MASK<<16); }
 #endif
     inline static void set(FASTLED_REGISTER port_t val) __attribute__ ((always_inline)) { _GPIO::r()->ODR = val; }
 
@@ -56,17 +64,20 @@ public:
     inline static port_t loval() __attribute__ ((always_inline)) { return _GPIO::r()->ODR & ~_MASK; }
     inline static port_ptr_t port() __attribute__ ((always_inline)) { return &_GPIO::r()->ODR; }
 
-#if defined(STM32F2XX)
+#if defined(FL_IS_STM32_F2)
     inline static port_ptr_t sport() __attribute__ ((always_inline)) { return &_GPIO::r()->BSRRL; }
     inline static port_ptr_t cport() __attribute__ ((always_inline)) { return &_GPIO::r()->BSRRH; }
 #else
     inline static port_ptr_t sport() __attribute__ ((always_inline)) { return &_GPIO::r()->BSRR; }
-    inline static port_ptr_t cport() __attribute__ ((always_inline)) { return &_GPIO::r()->BRR; }
+    inline static port_ptr_t cport() __attribute__ ((always_inline)) { return &_GPIO::r()->BSRR; }
 #endif
 
     inline static port_t mask() __attribute__ ((always_inline)) { return _MASK; }
+
+    /// Check if this pin is valid for use with FastLED
+    static constexpr bool validpin() { return true; }
 };
 
+}  // namespace fl
 
-
-FASTLED_NAMESPACE_END
+FL_DISABLE_WARNING_POP

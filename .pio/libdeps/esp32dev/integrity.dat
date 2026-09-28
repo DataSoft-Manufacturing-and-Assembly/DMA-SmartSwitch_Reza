@@ -1,3 +1,5 @@
-knolleary/PubSubClient@^2.8
+bblanchon/ArduinoJson@^7.4.3
+sui77/rc-switch
 tzapu/WiFiManager@^2.0.17
-fastled/FastLED@^3.9.3
+fastled/FastLED@^3.9.16
+knolleary/PubSubClient@^2.8

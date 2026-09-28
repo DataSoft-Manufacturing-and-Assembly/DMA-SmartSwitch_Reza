@@ -1,3 +1,15 @@
+// @filter: (memory is large)
+
+/// @file    Chromancer.ino
+/// @brief   Hexagonal LED display visualization
+/// @example Chromancer.ino
+///
+/// This sketch is fully compatible with the FastLED web compiler. To use it do the following:
+/// 1. Install Fastled: `pip install fastled`
+/// 2. cd into this examples page.
+/// 3. Run the FastLED web compiler at root: `fastled`
+/// 4. When the compiler is done a web page will open.
+
 /*
    Original Source: https://github.com/ZackFreedman/Chromance
    GaryWoo's Video: https://www.youtube.com/watch?v=-nSCtxa2Kp0
@@ -10,29 +22,27 @@
    (C) Voidstar Lab 2021
 */
 
-#if defined(__AVR__) || defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_ESP8266) || defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_RP2350) || defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_TEENSYLC)
-// Avr is not powerful enough.
-// Other platforms have weird issues. Will revisit this later.
-void setup() {}
-void loop() {}
-#else
+// FastLED.h must be included first to trigger precompiled headers for FastLED's build system
+#include "FastLED.h"
 
-#include "mapping.h"
-#include "net.h"
-#include "ripple.h"
+#include "fl/system/sketch_macros.h"
+#include "fl/log/log.h"
+#include "fl/stl/stdio.h"
+
 #include <FastLED.h>
-#include "detail.h"
-#include "fl/screenmap.h"
-#include "fl/math_macros.h"
-#include "fl/json.h"
-#include "fl/ui.h"
-#include "fl/map.h"
 
-#include "screenmap.json.h"
-#include "fl/str.h"
+#include "fl/math/screenmap.h"
+#include "fl/math/math.h"
+#include "fl/stl/json.h"
+#include "fl/ui/ui.h"
+#include "fl/stl/map.h"
 
+#include "fl/stl/string.h"
 
-using namespace fl;
+#include "./screenmap.json.h"
+#include "./mapping.h"
+#include "./ripple.h"
+#include "./detail.h"
 
 enum {
     BlackStrip = 0,
@@ -61,7 +71,7 @@ constexpr int lengths[] = {
 // should support this as well but right now we don't
 CRGB leds0[lengths[BlackStrip]] = {};
 CRGB leds1[lengths[GreenStrip]] = {};
-CRGB leds2[lengths[RedStrip]] = {}; // Red 
+CRGB leds2[lengths[RedStrip]] = {}; // Red
 CRGB leds3[lengths[BlueStrip]] = {};
 CRGB *leds[] = {leds0, leds1, leds2, leds3};
 
@@ -71,7 +81,7 @@ byte ledColors[40][14][3]; // LED buffer - each ripple writes to this, then we
 //float decay = 0.97; // Multiply all LED's by this amount each tick to create
                     // fancy fading tails
 
-UISlider sliderDecay("decay", .97f, .8, 1.0, .01);
+fl::UISlider sliderDecay("decay", .97f, .8, 1.0, .01);
 
 // These ripples are endlessly reused so we don't need to do any memory
 // management
@@ -114,8 +124,8 @@ float gyroX, gyroY, gyroZ;
 // We'll fire automatic pulses
 #define randomPulsesEnabled true // Fire random rainbow pulses from random nodes
 #define cubePulsesEnabled true   // Draw cubes at random nodes
-UICheckbox starburstPulsesEnabled("Starburst Pulses", true);
-UICheckbox simulatedBiometricsEnabled("Simulated Biometrics", true);
+fl::UICheckbox starburstPulsesEnabled("Starburst Pulses", true);
+fl::UICheckbox simulatedBiometricsEnabled("Simulated Biometrics", true);
 
 #define autoPulseTimeout                                                       \
     5000 // If no heartbeat is received in this many ms, begin firing
@@ -149,20 +159,25 @@ bool isNodeOnBorder(byte node) {
     return false;
 }
 
-UITitle title("Chromancer");
-UIDescription description("Take 6 seconds to boot up. Chromancer is a wall-mounted hexagonal LED display that originally reacted to biometric data from an EmotiBit sensor. It visualizes your heartbeat, skin temperature, and movement in real-time. Chromancer also has a few built-in effects that can be triggered with the push of a button. Enjoy!");
-UICheckbox allWhite("All White", false);
+fl::UITitle title("Chromancer");
+fl::UIDescription description("Take 6 seconds to boot up. Chromancer is a wall-mounted hexagonal LED display that originally reacted to biometric data from an EmotiBit sensor. It visualizes your heartbeat, skin temperature, and movement in real-time. Chromancer also has a few built-in effects that can be triggered with the push of a button. Enjoy!");
+fl::UICheckbox allWhite("All White", false);
 
-UIButton simulatedHeartbeat("Simulated Heartbeat");
-UIButton triggerStarburst("Trigger Starburst"); 
-UIButton triggerRainbowCube("Rainbow Cube");
-UIButton triggerBorderWave("Border Wave");
-UIButton triggerSpiral("Spiral Wave");
+fl::UIButton simulatedHeartbeat("Simulated Heartbeat");
+fl::UIButton triggerStarburst("Trigger Starburst");
+fl::UIButton triggerRainbowCube("Rainbow Cube");
+fl::UIButton triggerBorderWave("Border Wave");
+fl::UIButton triggerSpiral("Spiral Wave");
 bool wasHeartbeatClicked = false;
 bool wasStarburstClicked = false;
 bool wasRainbowCubeClicked = false;
 bool wasBorderWaveClicked = false;
 bool wasSpiralClicked = false;
+
+// Group related UI elements using fl::UIGroup template multi-argument constructor
+fl::UIGroup effectTriggers("Effect Triggers", simulatedHeartbeat, triggerStarburst, triggerRainbowCube, triggerBorderWave, triggerSpiral);
+fl::UIGroup automationControls("Automation", starburstPulsesEnabled, simulatedBiometricsEnabled);
+fl::UIGroup displayControls("Display", sliderDecay, allWhite);
 
 void setup() {
     Serial.begin(115200);
@@ -172,24 +187,36 @@ void setup() {
     Serial.println("JSON SCREENMAP");
     Serial.println(JSON_SCREEN_MAP);
 
-    FixedMap<Str, ScreenMap, 16> segmentMaps;
-    ScreenMap::ParseJson(JSON_SCREEN_MAP, &segmentMaps);
+    fl::flat_map<fl::string, fl::ScreenMap> segmentMaps;
+    fl::ScreenMap::ParseJson(JSON_SCREEN_MAP, &segmentMaps);
 
-    printf("Parsed %d segment maps\n", int(segmentMaps.size()));
+    fl::printf("Parsed %d segment maps\n", int(segmentMaps.size()));
     for (auto kv : segmentMaps) {
         Serial.print(kv.first.c_str());
         Serial.print(" ");
         Serial.println(kv.second.getLength());
-    } 
+    }
 
 
-    // ScreenMap screenmaps[4];
-    ScreenMap red, black, green, blue;
+    // fl::ScreenMap screenmaps[4];
+    fl::ScreenMap red, black, green, blue;
     bool ok = true;
-    ok = segmentMaps.get("red_segment", &red) && ok;
-    ok = segmentMaps.get("back_segment", &black) && ok;
-    ok = segmentMaps.get("green_segment", &green) && ok;
-    ok = segmentMaps.get("blue_segment", &blue) && ok;
+
+    auto red_it = segmentMaps.find("red_segment");
+    ok = (red_it != segmentMaps.end()) && ok;
+    if (red_it != segmentMaps.end()) red = red_it->second;
+
+    auto black_it = segmentMaps.find("back_segment");
+    ok = (black_it != segmentMaps.end()) && ok;
+    if (black_it != segmentMaps.end()) black = black_it->second;
+
+    auto green_it = segmentMaps.find("green_segment");
+    ok = (green_it != segmentMaps.end()) && ok;
+    if (green_it != segmentMaps.end()) green = green_it->second;
+
+    auto blue_it = segmentMaps.find("blue_segment");
+    ok = (blue_it != segmentMaps.end()) && ok;
+    if (blue_it != segmentMaps.end()) blue = blue_it->second;
     if (!ok) {
         Serial.println("Failed to get all segment maps");
         return;
@@ -207,15 +234,12 @@ void setup() {
     FastLED.addLeds<WS2812, 4>(blue_leds, lengths[BlueStrip]).setScreenMap(blue);
 
     FastLED.show();
-    net_init();
 }
 
 
 void loop() {
     unsigned long benchmark = millis();
-    net_loop();
-
-
+    FL_UNUSED(benchmark);
 
     // Fade all dots to create trails
     for (int strip = 0; strip < 40; strip++) {
@@ -233,7 +257,7 @@ void loop() {
     for (int segment = 0; segment < 40; segment++) {
         for (int fromBottom = 0; fromBottom < 14; fromBottom++) {
             int strip = ledAssignments[segment][0];
-            int led = round(fmap(fromBottom, 0, 13, ledAssignments[segment][2],
+            int led = fl::round(fmap(fromBottom, 0, 13, ledAssignments[segment][2],
                                  ledAssignments[segment][1]));
             leds[strip][led] = CRGB(ledColors[segment][fromBottom][0],
                                     ledColors[segment][fromBottom][1],
@@ -259,12 +283,12 @@ void loop() {
     wasRainbowCubeClicked = bool(triggerRainbowCube);
     wasBorderWaveClicked = bool(triggerBorderWave);
     wasSpiralClicked = bool(triggerSpiral);
-    
+
     if (wasSpiralClicked) {
         // Trigger spiral wave effect from center
         unsigned int baseColor = random(0xFFFF);
         byte centerNode = 15; // Center node
-        
+
         // Create 6 ripples in a spiral pattern
         for (int i = 0; i < 6; i++) {
             if (nodeConnections[centerNode][i] >= 0) {
@@ -288,20 +312,20 @@ void loop() {
     if (wasBorderWaveClicked) {
         // Trigger immediate border wave effect
         unsigned int baseColor = random(0xFFFF);
-        
+
         // Start ripples from each border node in sequence
         for (int i = 0; i < numberOfBorderNodes; i++) {
             byte node = borderNodes[i];
             // Find an inward direction
             for (int dir = 0; dir < 6; dir++) {
-                if (nodeConnections[node][dir] >= 0 && 
+                if (nodeConnections[node][dir] >= 0 &&
                     !isNodeOnBorder(nodeConnections[node][dir])) {
                     for (int j = 0; j < numberOfRipples; j++) {
                         if (ripples[j].state == dead) {
                             ripples[j].start(
                                 node, dir,
                                 Adafruit_DotStar_ColorHSV(
-                                    baseColor + (0xFFFF / numberOfBorderNodes) * i, 
+                                    baseColor + (0xFFFF / numberOfBorderNodes) * i,
                                     255, 255),
                                 .4, 2000, 0);
                             break;
@@ -341,7 +365,7 @@ void loop() {
         // Trigger immediate starburst effect
         unsigned int baseColor = random(0xFFFF);
         byte behavior = random(2) ? alwaysTurnsLeft : alwaysTurnsRight;
-        
+
         for (int i = 0; i < 6; i++) {
             for (int j = 0; j < numberOfRipples; j++) {
                 if (ripples[j].state == dead) {
@@ -356,7 +380,7 @@ void loop() {
         }
         lastHeartbeat = millis();
     }
-    
+
     if (wasHeartbeatClicked) {
         // Trigger immediate heartbeat effect
         for (int i = 0; i < 6; i++) {
@@ -565,5 +589,3 @@ void loop() {
     //  Serial.print("Benchmark: ");
     //  Serial.println(millis() - benchmark);
 }
-
-#endif  // __AVR__

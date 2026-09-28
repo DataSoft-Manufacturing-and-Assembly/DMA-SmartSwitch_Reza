@@ -1,31 +1,32 @@
 #pragma once
 
-#include <stdint.h>
+// IWYU pragma: private
 
-#include "fl/engine_events.h"
-#include "fl/namespace.h"
+#include "fl/stl/stdint.h"
 
+#include "fl/system/engine_events.h"
+#include "fl/stl/noexcept.h"
+namespace fl {
+class CLEDController;
+}  // namespace fl
 namespace fl {
 class ScreenMap;
 }
 
-FASTLED_NAMESPACE_BEGIN
+namespace fl {
 
-class CLEDController;
-
-
-class EngineListener: public fl::EngineEvents::Listener {
-public:
+class EngineListener : public fl::EngineEvents::Listener {
+  public:
     friend class fl::Singleton<EngineListener>;
-    static void Init();
+    static void Init() FL_NOEXCEPT;
 
-private:
-    void onEndFrame() override;
-    void onStripAdded(CLEDController* strip, uint32_t num_leds) override;
-    void onCanvasUiSet(CLEDController* strip, const fl::ScreenMap& screenmap) override;
-    EngineListener();
+  private:
+    void onEndFrame() FL_NOEXCEPT override;
+    void onStripAdded(CLEDController *strip, u32 num_leds) FL_NOEXCEPT override;
+    void onCanvasUiSet(CLEDController *strip,
+                       const fl::ScreenMap &screenmap) override FL_NOEXCEPT;
+    EngineListener() FL_NOEXCEPT;
     ~EngineListener();
 };
 
-
-FASTLED_NAMESPACE_END
+} // namespace fl

@@ -1,108 +1,119 @@
-#define DEBUG_MODE true
-// #define USE_RF_RECEIVER
-#define USE_Fast_LED
-#define HB_INTERVAL 5*60*1000
-// #define DATA_INTERVAL 15*1000
-#define CONFIG_TASK_WDT_DEBUG 1
-#define WIFI_RESET_BUTTON_PIN 0
-//=============================================================//
-
-#define FIRMWARE_VERSION "WiFi-2.11.0"
-#define FIRMWARE_RELEASE_DATE "27-Nov-2025"
-//=============================================================//
-
-// Include necessary libraries
+#pragma once
 #include <Arduino.h>
 #include <WiFi.h>
-#include <WiFiManager.h>  // WiFiManager library
+#include <WiFiManager.h>
 #include <PubSubClient.h>
 #include <FastLED.h>
 #include <HTTPClient.h>
-#include <esp_task_wdt.h>
 #include <Preferences.h>
+#include <Update.h>
+#include <esp_task_wdt.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <freertos/task.h>
 
-#ifdef USE_RF_RECEIVER
-    #include <RCSwitch.h>
-    RCSwitch mySwitch = RCSwitch();
-
-    #include <map>
-    std::map<unsigned long, unsigned long> lastRFReceivedTimeMap;
-    unsigned long lastRFGlobalReceivedTime = 0;  // Global debounce
-
-    #define RF_PIN 15  
+// ============================================================
+//  DEBUG
+// ============================================================
+#define DEBUG_MODE 1
+#if DEBUG_MODE
+  #define LOG(tag, msg) do { Serial.print("["); Serial.print(tag); \
+                              Serial.print("] "); Serial.println(msg); } while (0)
+  #define LOGF(tag, fmt, ...) do { Serial.print("["); Serial.print(tag); \
+                                    Serial.printf("] " fmt "\n", ##__VA_ARGS__); } while (0)
+#else
+  #define LOG(tag, msg) do {} while (0)
+  #define LOGF(tag, fmt, ...) do {} while (0)
 #endif
 
-//Device ID Configuration
-#define CHANGE_DEICE_ID 0
+// ============================================================
+//  Feature flags
+// ============================================================
+#define USE_RF_RECEIVER
 
-#if CHANGE_DEICE_ID
-    #define WORK_PACKAGE "1225"
-    #define GW_TYPE "10"
-    #define FIRMWARE_UPDATE_DATE "251015" 
-    #define DEVICE_SERIAL "0031"
+// ============================================================
+//  Firmware info
+// ============================================================
+#define FIRMWARE_VERSION       "WiFi-3.4.0"
+#define FIRMWARE_RELEASE_DATE  "28-Nov-2025"
+#define HARDWARE_VERSION       "3.26.1"
+
+// ============================================================
+//  Device ID
+//  Set CHANGE_DEVICE_ID to 1 for one flash, then back to 0
+// ============================================================
+#define CHANGE_DEVICE_ID 0
+#if CHANGE_DEVICE_ID
+  #define WORK_PACKAGE         "1225"
+  #define GW_TYPE              "10"
+  #define FIRMWARE_UPDATE_DATE "251015"
+  #define DEVICE_SERIAL        "0031"
 #endif
 
-const char* DEVICE_ID;
-//=============================================================//
+// ============================================================
+//  Pins
+// ============================================================
+#define LED_PIN            4       // data pin for the status LED
+#define RELAY_LIGHT1_PIN   25
+#define RELAY_LIGHT2_PIN   26
+#define RELAY_FAN_PIN      27
+#define TOUCH_LIGHT1_PIN   21
+#define TOUCH_LIGHT2_PIN   22
+#define TOUCH_FAN_PIN      23
+#define FAN_UP_PIN         32
+#define FAN_DOWN_PIN       33
+#define RF_PIN             32
 
-// Switch Pin Definitions
-#define SW_PIN1 25  
-#define SW_PIN2 26  
-#define SW_PIN3 27 
-#define SW_PIN4 14
-//=============================================================//
+// ============================================================
+//  Timing
+// ============================================================
+#define HB_INTERVAL_MS     (5UL * 60UL * 1000UL)   // heartbeat every 5 min
+#define DEBOUNCE_MS        300                     // touch debounce
+#define AP_HOLD_MS         5000                    // both light1+light2 held
+#define WIFI_TRY_MS        10000                   // WiFi try window
+#define WIFI_REST_MS       20000                   // WiFi rest window
+#define MQTT_TRY_MS        5000                    // MQTT try window
+#define MQTT_REST_MS       20000                   // MQTT rest window
 
-// Serial Print Section
-#define DEBUG_PRINT(x)  if (DEBUG_MODE) { Serial.print(x); }
-#define DEBUG_PRINTLN(x) if (DEBUG_MODE) { Serial.println(x); }
-//=============================================================//
+// ============================================================
+//  MQTT queue
+// ============================================================
+#define MQTT_QUEUE_SIZE   8
+#define MQTT_TOPIC_MAX    64
+#define MQTT_PAYLOAD_MAX  384
+#define MQTT_RX_BUFFER    640
 
-// WiFi and MQTT reconnection time config
-#define WIFI_ATTEMPT_COUNT 60
-#define WIFI_ATTEMPT_DELAY 1000
-#define WIFI_WAIT_COUNT 60
-#define WIFI_WAIT_DELAY 1000
-#define MAX_WIFI_ATTEMPTS 2
-#define MQTT_ATTEMPT_COUNT 12
-#define MQTT_ATTEMPT_DELAY 5000
-//=============================================================//
+struct MqttOutMsg {
+    char topic[MQTT_TOPIC_MAX];
+    char payload[MQTT_PAYLOAD_MAX];
+};
 
-int wifiAttemptCount = WIFI_ATTEMPT_COUNT;
-int wifiWaitCount = WIFI_WAIT_COUNT;
-int maxWifiAttempts = MAX_WIFI_ATTEMPTS;
-int mqttAttemptCount = MQTT_ATTEMPT_COUNT;
-//=============================================================//
+// ============================================================
+//  Global objects (defined in config.cpp)
+// ============================================================
+extern const char* MQTT_SERVER;
+extern const char* MQTT_USER;
+extern const char* MQTT_PASS;
+extern const char* TOPIC_PUB;      // device → server (all messages)
+extern const char* TOPIC_SUB;      // server → device  (subscribe at SUB/<device_id>)
+extern const char* OTA_URL;
 
-const char* mqtt_server = "broker2.dma-bd.com";
-const char* mqtt_user = "broker2";
-const char* mqtt_password = "Secret!@#$1234";
-const char* mqtt_hb_topic = "DMA/SmartSwitch/HB";
-const char* mqtt_pub_topic = "DMA/SmartSwitch/PUB";
-const char* mqtt_sub_topic = "DMA/SmartSwitch/SUB";
-const char* mqtt_ack_topic = "DMA/SmartSwitch/ACK";
-const char* mqtt_ota_topic = "DMA/SmartSwitch/OTA";
-const char* ota_url = "https://raw.githubusercontent.com/DataSoft-Manufacturing-and-Assembly/DMA-SmartSwitch_Reza/main/ota/firmware.bin";
-//=============================================================//
+extern Preferences  prefs;
+extern WiFiManager  wifiManager;
+extern WiFiClient   wifiClient;
+extern PubSubClient mqtt;
 
-// FastLED Configuration
-#ifdef USE_Fast_LED
-    #define DATA_PIN 4
-    #define NUM_LEDS 1
-    CRGB leds[NUM_LEDS];
-#endif
-//=============================================================//
+extern char        g_deviceId[32];
+extern const char* DEVICE_ID;
 
-//Making Instances
-Preferences preferences;
+extern QueueHandle_t mqttOutQueue;
 
-WiFiManager wm;
-WiFiClient espClient;
-PubSubClient client(espClient);
-
-TaskHandle_t networkTaskHandle;
-TaskHandle_t mainTaskHandle;
-TaskHandle_t wifiResetTaskHandle = NULL;
-TaskHandle_t otaTaskHandle = NULL;
-
-bool wifiResetFlag = false;
-//=============================================================//
+// ============================================================
+//  Task handles
+// ============================================================
+extern TaskHandle_t taskNetwork;
+extern TaskHandle_t taskMain;
+extern TaskHandle_t taskSwitches;
+extern TaskHandle_t taskWifiReset;
+extern TaskHandle_t taskOta;
+extern TaskHandle_t taskRf;

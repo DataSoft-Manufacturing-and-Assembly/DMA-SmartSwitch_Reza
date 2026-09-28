@@ -4,19 +4,16 @@
 
 cmake_minimum_required(VERSION 3.5)
 
-file(GLOB FastLED_SRCS "src/*.cpp")
-file(GLOB FastLED_SRCS "src/fl/**/*.cpp")
-file(GLOB FastLED_SRCS "src/sensors/**/*.cpp")
-file(GLOB FastLED_SRCS "src/fx/**/*.cpp")
-list(REMOVE_ITEM FastLED_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/stub_main.cpp")
+# Collect all source files
+file(GLOB_RECURSE FastLED_SRCS "src/*.cpp")
 
-file(GLOB ESP32_SRCS "src/platforms/esp/32/*.cpp")
-file(GLOB ESP32_THIRD_PARTY "src/third_party/*.c")
-file(GLOB ESP32_THIRD_PARTY "src/third_party/*.cpp")
-list(APPEND FastLED_SRCS ${ESP32_SRCS})
 
-idf_component_register(SRCS ${FastLED_SRCS} ${ESP32_LED_STRIP_COMPONENT_SRCS}
+
+# Register the component with ESP-IDF
+idf_component_register(SRCS ${FastLED_SRCS}
                        INCLUDE_DIRS "src"
-                       REQUIRES arduino-esp32 esp_driver_rmt driver)
+                       REQUIRES arduino-esp32 esp_driver_i2s esp_driver_mcpwm esp_driver_rmt
+                                esp_http_server esp_lcd driver esp_mm esp_wifi esp_netif
+                                app_update)
 
 project(FastLED)
